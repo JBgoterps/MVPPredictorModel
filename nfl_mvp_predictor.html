@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NFL MVP Predictor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0e1a;--bg2:#111827;--bg3:#1a2236;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#f0f4ff;--text2:#8a9bbf;--text3:#5a6a88;
+  --gold:#f4c24a;--gold2:#c8961e;
+  --blue:#3b82f6;--green:#22c55e;--red:#ef4444;
+  --purple:#a855f7;--orange:#f97316;--teal:#14b8a6;
+}
+body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.6}
+
+/* HEADER */
+header{background:var(--bg2);border-bottom:1px solid var(--border2);padding:0 2rem;position:sticky;top:0;z-index:100}
+.header-inner{max-width:1140px;margin:0 auto;display:flex;align-items:center;gap:1.5rem;padding:.9rem 0}
+.logo{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;letter-spacing:1px;color:var(--gold);white-space:nowrap}
+.logo span{color:var(--text)}
+.header-meta{flex:1;font-size:12px;color:var(--text3)}
+.live-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:var(--green);font-size:11px;font-weight:600;padding:4px 10px;border-radius:100px;letter-spacing:.5px;text-transform:uppercase}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* MAIN */
+main{max-width:1140px;margin:0 auto;padding:1.5rem 2rem}
+
+/* HERO */
+.hero{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:1.75rem 2rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:2rem}
+.hero-text{flex:1}
+.hero-eyebrow{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:.4rem}
+.hero-title{font-family:'Barlow Condensed',sans-serif;font-size:38px;font-weight:700;line-height:1;margin-bottom:.6rem}
+.hero-title span{color:var(--gold)}
+.hero-desc{font-size:14px;color:var(--text2);max-width:520px}
+.hero-stats{display:flex;gap:12px;flex-shrink:0}
+.hstat{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 18px;text-align:center}
+.hstat-val{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:700;color:var(--gold);line-height:1}
+.hstat-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+
+/* TABS */
+.tabs{display:flex;gap:3px;margin-bottom:1.25rem;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:3px}
+.tab{flex:1;padding:9px 1rem;font-family:'Barlow',sans-serif;font-size:13px;font-weight:500;border:none;border-radius:7px;cursor:pointer;background:transparent;color:var(--text2);transition:all .18s}
+.tab:hover{color:var(--text)}
+.tab.active{background:var(--bg3);color:var(--gold);border:1px solid var(--border2)}
+.panel{display:none}.panel.active{display:block}
+
+/* FORMULA BOX */
+.formula-box{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:1.5rem 1.75rem;margin-bottom:1.25rem}
+.formula-title{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--gold);margin-bottom:1rem}
+.formula-eq{font-family:monospace;font-size:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:1rem 1.25rem;color:var(--text);line-height:2;margin-bottom:1rem;word-break:break-all}
+.formula-eq .hl-pff{color:#60a5fa}
+.formula-eq .hl-wins{color:var(--green)}
+.formula-eq .hl-ptd{color:var(--gold)}
+.formula-eq .hl-rtd{color:var(--orange)}
+.formula-eq .hl-bonus{color:var(--purple)}
+.formula-eq .hl-div{color:var(--text3)}
+.formula-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.formula-component{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.fc-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.fc-desc{font-size:12px;color:var(--text3);line-height:1.4}
+.fc-weight{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;float:right}
+
+/* METRIC ROW */
+.metric-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem}
+.metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:11px;padding:1rem 1.1rem}
+.metric-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:5px}
+.metric-val{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;color:var(--text);line-height:1}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:3px}
+
+/* SECTION TITLE */
+.section-title{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:600;letter-spacing:.5px;color:var(--text);margin:1.25rem 0 .75rem;display:flex;align-items:center;gap:8px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* WEEK SELECTOR */
+.week-bar{display:flex;align-items:center;gap:10px;margin-bottom:1rem;flex-wrap:wrap}
+.week-bar label{font-size:13px;font-weight:500;color:var(--text2);white-space:nowrap}
+.week-bar select{font-family:'Barlow',sans-serif;font-size:13px;font-weight:500;padding:7px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);cursor:pointer;outline:none}
+.formula-toggle{margin-left:auto;font-size:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:6px 12px;color:var(--text2);cursor:pointer;font-family:'Barlow',sans-serif;transition:all .15s}
+.formula-toggle:hover{color:var(--gold);border-color:var(--gold2)}
+
+/* LEADERBOARD */
+.leaderboard{display:flex;flex-direction:column;gap:6px;margin-bottom:1.25rem}
+.player-row{display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:11px;padding:12px 1.1rem;transition:border-color .18s;cursor:pointer}
+.player-row:hover{border-color:var(--border2)}
+.player-row.top-player{border-color:var(--gold2);background:linear-gradient(90deg,rgba(244,194,74,.05) 0%,var(--bg2) 60%)}
+.player-row.expanded{border-color:var(--blue)}
+.rank-num{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;width:26px;text-align:center;flex-shrink:0}
+.rank-1{color:var(--gold)}.rank-2{color:#c0c0c0}.rank-3{color:#cd7f32}.rank-other{color:var(--text3)}
+.player-name{font-size:15px;font-weight:600;flex:1;color:var(--text)}
+.player-stats{display:flex;gap:6px;flex-wrap:wrap}
+.stat-chip{font-size:11px;font-weight:600;padding:3px 7px;border-radius:5px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);white-space:nowrap}
+.sc-pff{background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.25);color:#93c5fd}
+.sc-td{background:rgba(244,194,74,.1);border-color:rgba(244,194,74,.25);color:var(--gold)}
+.sc-bonus{background:rgba(168,85,247,.1);border-color:rgba(168,85,247,.25);color:#d8b4fe}
+.sc-rtd{background:rgba(249,115,22,.1);border-color:rgba(249,115,22,.25);color:#fdba74}
+.mvp-col{text-align:right;flex-shrink:0}
+.mvp-score{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;color:var(--gold);line-height:1}
+.mvp-score-label{font-size:9px;color:var(--text3);text-transform:uppercase}
+
+/* BREAKDOWN PANEL */
+.breakdown-panel{display:none;background:var(--bg3);border-top:1px solid var(--border2);padding:14px 1.1rem;border-radius:0 0 10px 10px;margin-top:-6px}
+.breakdown-panel.open{display:block}
+.breakdown-title{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.breakdown-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.bd-item{text-align:center}
+.bd-label{font-size:10px;color:var(--text3);margin-bottom:3px}
+.bd-val{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700}
+.bd-sub{font-size:10px;color:var(--text3)}
+.breakdown-bar{margin-top:10px}
+.bbar-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:3px}
+.bbar-bg{height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;display:flex}
+.bbar-seg{height:100%;transition:width .6s ease}
+
+/* CHART */
+.chart-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.1rem;margin-bottom:1.25rem}
+.chart-box-title{font-size:12px;font-weight:600;color:var(--text3);margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.5px}
+.chart-wrap{position:relative;width:100%}
+.legend-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:.75rem;font-size:12px;color:var(--text2)}
+.legend-item{display:flex;align-items:center;gap:5px}
+.legend-dot{width:10px;height:10px;border-radius:2px}
+
+/* HISTORY TABLE */
+.hist-table{width:100%;border-collapse:collapse;font-size:13px}
+.hist-table th{text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);padding:0 10px 8px;border-bottom:1px solid var(--border)}
+.hist-table td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text)}
+.hist-table tr:hover td{background:var(--bg3)}
+.score-cell{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;color:var(--gold)}
+.trend-chip{font-size:10px;font-weight:600;padding:2px 7px;border-radius:100px}
+.trend-up{background:rgba(34,197,94,.12);color:#86efac}
+.trend-down{background:rgba(239,68,68,.12);color:#fca5a5}
+.trend-flat{background:var(--bg3);color:var(--text3)}
+
+/* CORR */
+.corr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.25rem}
+.corr-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.1rem}
+.corr-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+.corr-val{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:700;line-height:1;margin-bottom:6px}
+.corr-bar-bg{height:4px;background:var(--bg3);border-radius:2px;margin-bottom:6px}
+.corr-bar-fill{height:100%;border-radius:2px}
+.corr-desc{font-size:11px;color:var(--text3);line-height:1.4}
+
+/* STAT BARS */
+.stat-bar-row{margin-bottom:8px}
+.stat-bar-head{display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px}
+.stat-bar-name{font-weight:500;color:var(--text)}
+.stat-bar-val{font-weight:600;color:var(--text2)}
+.stat-bar-bg{height:22px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.stat-bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:600;transition:width 1s ease}
+
+/* FOOTER */
+footer{border-top:1px solid var(--border);padding:1.25rem 2rem;text-align:center;font-size:11px;color:var(--text3);margin-top:2.5rem}
+
+@media(max-width:820px){
+  .hero{flex-direction:column}.hero-stats{width:100%;justify-content:space-between}
+  .metric-row{grid-template-columns:1fr 1fr}
+  .formula-grid{grid-template-columns:1fr 1fr}
+  .corr-grid{grid-template-columns:1fr 1fr}
+  .breakdown-grid{grid-template-columns:repeat(3,1fr)}
+  .player-stats{display:none}
+}
+@media(max-width:540px){
+  main{padding:1rem}
+  .metric-row{grid-template-columns:1fr}
+  .corr-grid{grid-template-columns:1fr}
+  .tab{font-size:11px;padding:7px 6px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">NFL<span> MVP</span> PREDICTOR</div>
+    <div class="header-meta">2006–2025 · All 18 Weeks · MVP+ Scoring System</div>
+    <span class="live-badge"><span class="live-dot"></span>2025 Final</span>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <div class="hero-text">
+      <div class="hero-eyebrow">Statistical MVP model</div>
+      <div class="hero-title">Who wins the <span>MVP?</span></div>
+      <div class="hero-desc">A data-driven model combining PFF grade, win rate, passing TDs, rushing TDs, and a narrative bonus — validated across 20 NFL seasons. Click any player to see their formula breakdown.</div>
+    </div>
+    <div class="hero-stats">
+      <div class="hstat"><div class="hstat-val">97.3</div><div class="hstat-label">Stafford MVP+</div></div>
+      <div class="hstat"><div class="hstat-val">18</div><div class="hstat-label">Weeks tracked</div></div>
+      <div class="hstat"><div class="hstat-val">20</div><div class="hstat-label">Seasons</div></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('current')">🏈 2025 Season</button>
+    <button class="tab" onclick="switchTab('formula')">🧮 The Formula</button>
+    <button class="tab" onclick="switchTab('history')">📜 Historical MVPs</button>
+    <button class="tab" onclick="switchTab('stats')">📊 Stat Analysis</button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ 2025 SEASON -->
+  <div id="panel-current" class="panel active">
+    <div class="week-bar">
+      <label>Select week:</label>
+      <select id="weekSel" onchange="renderCurrent()"></select>
+      <button class="formula-toggle" onclick="switchTab('formula')">🧮 View formula</button>
+    </div>
+    <div class="metric-row" id="metricRow"></div>
+    <div class="section-title">MVP+ leaderboard — click a player to see their formula breakdown</div>
+    <div class="leaderboard" id="leaderboard"></div>
+    <div class="section-title">Week-by-week score trend — top 5 candidates</div>
+    <div class="chart-box">
+      <div class="legend-row" id="trendLegend"></div>
+      <div class="chart-wrap" style="height:270px">
+        <canvas id="trendChart" role="img" aria-label="Line chart of weekly MVP+ scores for top 5 QB candidates across all 18 weeks"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ FORMULA -->
+  <div id="panel-formula" class="panel">
+    <div class="formula-box">
+      <div class="formula-title">MVP+ Scoring Formula</div>
+      <div class="formula-eq">
+        MVP+ &nbsp;=&nbsp;
+        <span class="hl-div">( (</span><span class="hl-pff">PFF&nbsp;Grade × 2</span><span class="hl-div">)</span>
+        &nbsp;+&nbsp;
+        <span class="hl-div">( (</span><span class="hl-wins">Wins / GP</span><span class="hl-div">) × 125 )</span>
+        &nbsp;+&nbsp;
+        <span class="hl-div">( (</span><span class="hl-ptd">Pass&nbsp;TD / GP</span><span class="hl-div">) × 32 )</span>
+        &nbsp;+&nbsp;
+        <span class="hl-div">( (</span><span class="hl-rtd">Rush&nbsp;TD / GP</span><span class="hl-div">) × 16 )</span>
+        <span class="hl-div">&nbsp;) / 3.75</span>
+        &nbsp;+&nbsp;
+        <span class="hl-bonus">Team Performance Bonus</span>
+        &nbsp;−&nbsp;
+        <span class="hl-div">Missed Games Penalty</span>
+      </div>
+      <div class="formula-grid">
+        <div class="formula-component">
+          <div class="fc-label" style="color:#60a5fa">PFF Grade <span class="fc-weight" style="color:#60a5fa">×2</span></div>
+          <div class="fc-desc">Pro Football Focus game grade (0–100). Doubled to heavily weight overall efficiency, accuracy, and decision-making quality.</div>
+        </div>
+        <div class="formula-component">
+          <div class="fc-label" style="color:var(--green)">(Wins / GP) × 125 <span class="fc-weight" style="color:var(--green)">~33%</span></div>
+          <div class="fc-desc">Win rate scaled to games played. Normalizes for missed games. The single largest predictor — voters reward winning QBs above all else.</div>
+        </div>
+        <div class="formula-component">
+          <div class="fc-label" style="color:var(--gold)">(Pass TD / GP) × 32 <span class="fc-weight" style="color:var(--gold)">~19%</span></div>
+          <div class="fc-desc">Per-game passing touchdown rate. Volume stat that drives public visibility. Scaled by 32 to put it on the same magnitude as the other components.</div>
+        </div>
+        <div class="formula-component">
+          <div class="fc-label" style="color:var(--orange)">(Rush TD / GP) × 16 <span class="fc-weight" style="color:var(--orange)">~10%</span></div>
+          <div class="fc-desc">Per-game rushing touchdown rate at half the weight of pass TDs. Rewards dual-threat QBs like Lamar Jackson (7 rush TD) and Josh Allen (14 rush TD in 2025).</div>
+        </div>
+        <div class="formula-component">
+          <div class="fc-label" style="color:var(--purple)">÷ 3.75 normalization <span class="fc-weight" style="color:var(--purple)"></span></div>
+          <div class="fc-desc">Divides the bracketed sum by 3.75 to bring the raw total down to a readable 0–120 range. Without this, scores would routinely exceed 350+.</div>
+        </div>
+        <div class="formula-component">
+          <div class="fc-label" style="color:var(--teal)">Bonuses &amp; Penalties</div>
+          <div class="fc-desc">Team Performance Bonus (0–3.6 pts) rewards sustained excellence. Missed Games Penalty docks players who miss significant time through injury or suspension.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Live formula calculator</div>
+    <div class="chart-box" style="padding:1.5rem 1.75rem">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+        <div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">PFF Grade</span><span id="v_pff" style="color:#60a5fa;font-weight:600">85.0</span></div>
+              <input type="range" id="sl_pff" min="40" max="99" value="85" step="0.5" oninput="calcFormula()">
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Wins</span><span id="v_wins" style="color:var(--green);font-weight:600">10</span></div>
+              <input type="range" id="sl_wins" min="0" max="17" value="10" step="0.5" oninput="calcFormula()">
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Games Played</span><span id="v_gp" style="color:var(--text);font-weight:600">16</span></div>
+              <input type="range" id="sl_gp" min="1" max="18" value="16" step="1" oninput="calcFormula()">
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Pass TDs</span><span id="v_ptd" style="color:var(--gold);font-weight:600">30</span></div>
+              <input type="range" id="sl_ptd" min="0" max="55" value="30" step="1" oninput="calcFormula()">
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Rush TDs</span><span id="v_rtd" style="color:var(--orange);font-weight:600">2</span></div>
+              <input type="range" id="sl_rtd" min="0" max="20" value="2" step="1" oninput="calcFormula()">
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Team Bonus</span><span id="v_bonus" style="color:var(--purple);font-weight:600">0.0</span></div>
+              <input type="range" id="sl_bonus" min="0" max="3.6" value="0" step="0.1" oninput="calcFormula()">
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem">
+          <div style="text-align:center">
+            <div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Calculated MVP+</div>
+            <div id="calc_result" style="font-family:'Barlow Condensed',sans-serif;font-size:72px;font-weight:700;color:var(--gold);line-height:1">83.2</div>
+          </div>
+          <div id="calc_breakdown" style="font-size:12px;color:var(--text3);line-height:1.8;text-align:center"></div>
+          <div id="calc_comparison" style="font-size:13px;color:var(--text2);text-align:center;padding:10px 16px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ HISTORY -->
+  <div id="panel-history" class="panel">
+    <div class="section-title">Top MVP+ score per season (2006–2025)</div>
+    <div class="chart-box">
+      <div class="chart-box-title">Gold = 2025 · Blue = all other years · hover for details</div>
+      <div class="chart-wrap" style="height:290px">
+        <canvas id="histChart" role="img" aria-label="Bar chart of top MVP+ scores per season 2006-2025"></canvas>
+      </div>
+    </div>
+    <div class="section-title">MVP winners — full season record</div>
+    <div class="chart-box">
+      <table class="hist-table" id="histTable"></table>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ STATS -->
+  <div id="panel-stats" class="panel">
+    <div class="section-title">Correlation of each stat with final MVP+ score</div>
+    <div class="corr-grid" id="corrGrid"></div>
+    <div class="section-title">2025 final week — full MVP+ bar chart</div>
+    <div class="chart-box"><div id="statBars"></div></div>
+    <div class="section-title">PFF grade vs MVP+ — 2025 final week</div>
+    <div class="chart-box">
+      <div class="chart-box-title">Each dot = one QB. Gold = MVP leader.</div>
+      <div class="chart-wrap" style="height:280px">
+        <canvas id="scatterChart" role="img" aria-label="Scatter chart of PFF grade vs MVP+ score for 2025 QBs"></canvas>
+      </div>
+    </div>
+    <div class="section-title">Historical MVP winners — PFF vs Pass TDs</div>
+    <div class="chart-box">
+      <div class="legend-row">
+        <div class="legend-item"><span class="legend-dot" style="background:var(--gold)"></span>MVP winners</div>
+        <div class="legend-item"><span class="legend-dot" style="background:rgba(59,130,246,.6)"></span>Runners-up</div>
+      </div>
+      <div class="chart-wrap" style="height:280px">
+        <canvas id="histScatter" role="img" aria-label="Scatter of PFF grade vs passing TDs for historical MVP winners and runners-up"></canvas>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>NFL MVP Predictor &nbsp;·&nbsp; Formula: ((PFF×2)+((W/GP)×125)+((PTD/GP)×32)+((RTD/GP)×16))/3.75 + Bonus &nbsp;·&nbsp; Data: 2025 season &amp; 2006–2025 history
+</footer>
+
+<script>
+// ═══════════════════════════════ ALL WEEKS DATA (from spreadsheet)
+const weeksData = {"Week18":[{"p":"M. Stafford","ptd":46,"pff":93.5,"wins":12.0,"gp":17,"rtd":0,"bonus":0.8,"mvp":97.29},{"p":"D. Maye","ptd":31,"pff":90.1,"wins":14.0,"gp":17,"rtd":4,"bonus":2.8,"mvp":94.87},{"p":"T. Lawrence","ptd":29,"pff":84.7,"wins":13.0,"gp":17,"rtd":9,"bonus":0.0,"mvp":87.48},{"p":"J. Allen","ptd":25,"pff":87.4,"wins":11.0,"gp":16,"rtd":14,"bonus":0.0,"mvp":86.6},{"p":"S. Darnold","ptd":25,"pff":79.3,"wins":14.0,"gp":17,"rtd":0,"bonus":0.0,"mvp":82.29},{"p":"J. Herbert","ptd":26,"pff":83.2,"wins":11.0,"gp":16,"rtd":2,"bonus":0.0,"mvp":81.69},{"p":"B. Nix","ptd":25,"pff":75.2,"wins":14.0,"gp":17,"rtd":5,"bonus":0.0,"mvp":81.36},{"p":"J. Hurts","ptd":25,"pff":78.9,"wins":11.0,"gp":16,"rtd":8,"bonus":0.0,"mvp":80.46},{"p":"J. Love","ptd":23,"pff":88.5,"wins":9.5,"gp":15,"rtd":0,"bonus":0.0,"mvp":80.4},{"p":"D. Prescott","ptd":30,"pff":86.9,"wins":7.5,"gp":17,"rtd":2,"bonus":0.0,"mvp":76.61},{"p":"J. Goff","ptd":34,"pff":77.7,"wins":9.0,"gp":17,"rtd":0,"bonus":0.0,"mvp":76.15},{"p":"C. Williams","ptd":27,"pff":75.5,"wins":11.0,"gp":17,"rtd":3,"bonus":0.0,"mvp":76.14},{"p":"A. Rodgers","ptd":24,"pff":68.7,"wins":10.0,"gp":16,"rtd":1,"bonus":0.0,"mvp":69.54},{"p":"B. Mayfield","ptd":26,"pff":70.0,"wins":8.0,"gp":17,"rtd":1,"bonus":0.0,"mvp":66.32},{"p":"B. Young","ptd":23,"pff":70.5,"wins":8.0,"gp":16,"rtd":2,"bonus":0.0,"mvp":66.07},{"p":"P. Mahomes","ptd":22,"pff":76.0,"wins":6.0,"gp":14,"rtd":5,"bonus":0.0,"mvp":60.75},{"p":"C.J. Stroud","ptd":19,"pff":72.9,"wins":9.0,"gp":15,"rtd":0,"bonus":0.0,"mvp":60.69},{"p":"T. Tagovailoa","ptd":20,"pff":62.1,"wins":6.0,"gp":14,"rtd":0,"bonus":0.0,"mvp":50.6}],"Week17":[{"p":"M. Stafford","ptd":42,"pff":93.2,"wins":11.0,"gp":16,"rtd":0,"bonus":0.7,"mvp":95.72},{"p":"D. Maye","ptd":30,"pff":88.9,"wins":13.0,"gp":16,"rtd":4,"bonus":2.9,"mvp":94.46},{"p":"J. Allen","ptd":25,"pff":87.4,"wins":11.0,"gp":16,"rtd":14,"bonus":0.0,"mvp":86.6},{"p":"T. Lawrence","ptd":26,"pff":83.2,"wins":12.0,"gp":16,"rtd":9,"bonus":0.0,"mvp":85.64},{"p":"S. Darnold","ptd":25,"pff":80.2,"wins":13.0,"gp":16,"rtd":0,"bonus":0.0,"mvp":83.19},{"p":"B. Nix","ptd":25,"pff":76.0,"wins":13.0,"gp":16,"rtd":5,"bonus":0.0,"mvp":82.28},{"p":"J. Herbert","ptd":26,"pff":83.2,"wins":11.0,"gp":16,"rtd":2,"bonus":0.0,"mvp":81.69},{"p":"J. Hurts","ptd":25,"pff":78.9,"wins":11.0,"gp":16,"rtd":8,"bonus":0.0,"mvp":80.46},{"p":"J. Love","ptd":23,"pff":88.5,"wins":9.5,"gp":15,"rtd":0,"bonus":0.0,"mvp":80.4},{"p":"D. Prescott","ptd":30,"pff":88.1,"wins":7.5,"gp":16,"rtd":2,"bonus":0.0,"mvp":79.14},{"p":"C. Williams","ptd":25,"pff":76.4,"wins":11.0,"gp":16,"rtd":3,"bonus":0.0,"mvp":77.8},{"p":"J. Goff","ptd":33,"pff":76.2,"wins":8.0,"gp":16,"rtd":0,"bonus":0.0,"mvp":74.91},{"p":"A. Rodgers","ptd":23,"pff":67.7,"wins":9.0,"gp":15,"rtd":1,"bonus":0.0,"mvp":68.48},{"p":"P. Mahomes","ptd":22,"pff":76.0,"wins":6.0,"gp":14,"rtd":5,"bonus":0.0,"mvp":66.75},{"p":"B. Young","ptd":21,"pff":70.1,"wins":8.0,"gp":15,"rtd":2,"bonus":0.0,"mvp":66.68},{"p":"B. Mayfield","ptd":25,"pff":70.0,"wins":7.0,"gp":16,"rtd":1,"bonus":0.0,"mvp":65.52},{"p":"D. Jones","ptd":19,"pff":71.7,"wins":8.0,"gp":13,"rtd":5,"bonus":0.0,"mvp":63.87},{"p":"C.J. Stroud","ptd":18,"pff":72.1,"wins":8.0,"gp":13,"rtd":0,"bonus":0.0,"mvp":61.78},{"p":"T. Tagovailoa","ptd":20,"pff":62.1,"wins":6.0,"gp":14,"rtd":0,"bonus":0.0,"mvp":56.6},{"p":"C. Ward","ptd":15,"pff":57.8,"wins":3.0,"gp":16,"rtd":1,"bonus":0.0,"mvp":45.34}],"Week16":[{"p":"M. Stafford","ptd":40,"pff":93.4,"wins":11.0,"gp":15,"rtd":0,"bonus":3.6,"mvp":100.61},{"p":"J. Allen","ptd":25,"pff":88.7,"wins":11.0,"gp":15,"rtd":12,"bonus":0.0,"mvp":89.39},{"p":"D. Maye","ptd":25,"pff":86.6,"wins":12.0,"gp":15,"rtd":4,"bonus":0.0,"mvp":88.21},{"p":"T. Lawrence","ptd":26,"pff":81.5,"wins":11.0,"gp":15,"rtd":7,"bonus":0.0,"mvp":84.69},{"p":"S. Darnold","ptd":24,"pff":81.5,"wins":12.0,"gp":15,"rtd":0,"bonus":0.0,"mvp":83.79},{"p":"J. Herbert","ptd":25,"pff":83.2,"wins":11.0,"gp":15,"rtd":2,"bonus":0.0,"mvp":83.61},{"p":"J. Love","ptd":23,"pff":88.5,"wins":9.5,"gp":15,"rtd":0,"bonus":0.0,"mvp":81.4},{"p":"B. Nix","ptd":24,"pff":73.7,"wins":12.0,"gp":15,"rtd":4,"bonus":0.0,"mvp":80.76},{"p":"J. Hurts","ptd":24,"pff":78.8,"wins":10.0,"gp":15,"rtd":8,"bonus":0.0,"mvp":80.18},{"p":"C. Williams","ptd":23,"pff":75.7,"wins":11.0,"gp":15,"rtd":3,"bonus":0.0,"mvp":78.76},{"p":"D. Prescott","ptd":28,"pff":88.6,"wins":6.5,"gp":15,"rtd":2,"bonus":0.0,"mvp":78.2},{"p":"J. Goff","ptd":32,"pff":78.5,"wins":8.0,"gp":15,"rtd":0,"bonus":0.0,"mvp":77.85},{"p":"A. Rodgers","ptd":23,"pff":69.2,"wins":9.0,"gp":14,"rtd":1,"bonus":0.0,"mvp":71.66},{"p":"D. Jones","ptd":19,"pff":71.7,"wins":8.0,"gp":13,"rtd":5,"bonus":0.0,"mvp":69.87},{"p":"B. Young","ptd":21,"pff":71.2,"wins":8.0,"gp":14,"rtd":1,"bonus":0.0,"mvp":69.13},{"p":"P. Mahomes","ptd":22,"pff":76.0,"wins":6.0,"gp":14,"rtd":5,"bonus":0.0,"mvp":68.75},{"p":"B. Mayfield","ptd":23,"pff":71.1,"wins":7.0,"gp":15,"rtd":1,"bonus":0.0,"mvp":66.84},{"p":"C.J. Stroud","ptd":16,"pff":71.7,"wins":7.0,"gp":12,"rtd":0,"bonus":0.0,"mvp":60.06},{"p":"T. Tagovailoa","ptd":20,"pff":62.8,"wins":6.0,"gp":14,"rtd":0,"bonus":0.0,"mvp":58.97},{"p":"L. Jackson","ptd":18,"pff":70.0,"wins":6.0,"gp":12,"rtd":2,"bonus":0.0,"mvp":58.51},{"p":"C. Ward","ptd":13,"pff":59.8,"wins":3.0,"gp":15,"rtd":1,"bonus":0.0,"mvp":46.24}],"Week15":[{"p":"M. Stafford","ptd":37,"pff":93.3,"wins":11.0,"gp":14,"rtd":0,"bonus":3.6,"mvp":102.1},{"p":"J. Allen","ptd":25,"pff":87.5,"wins":10.0,"gp":14,"rtd":12,"bonus":0.0,"mvp":89.37},{"p":"D. Maye","ptd":23,"pff":87.0,"wins":11.0,"gp":14,"rtd":4,"bonus":0.0,"mvp":87.83},{"p":"J. Love","ptd":23,"pff":89.3,"wins":9.5,"gp":14,"rtd":0,"bonus":0.0,"mvp":84.26},{"p":"B. Nix","ptd":23,"pff":75.5,"wins":12.0,"gp":14,"rtd":4,"bonus":0.0,"mvp":84.08},{"p":"S. Darnold","ptd":22,"pff":82.5,"wins":11.0,"gp":14,"rtd":0,"bonus":0.0,"mvp":83.6},{"p":"T. Lawrence","ptd":23,"pff":79.6,"wins":10.0,"gp":14,"rtd":6,"bonus":0.0,"mvp":82.11},{"p":"J. Herbert","ptd":23,"pff":80.8,"wins":10.0,"gp":14,"rtd":1,"bonus":0.0,"mvp":81.23},{"p":"J. Hurts","ptd":22,"pff":79.1,"wins":9.0,"gp":14,"rtd":8,"bonus":0.0,"mvp":79.46},{"p":"D. Prescott","ptd":26,"pff":87.1,"wins":6.5,"gp":14,"rtd":2,"bonus":0.0,"mvp":78.39},{"p":"J. Goff","ptd":29,"pff":77.3,"wins":8.0,"gp":14,"rtd":0,"bonus":0.0,"mvp":77.95},{"p":"C. Williams","ptd":21,"pff":74.6,"wins":10.0,"gp":14,"rtd":3,"bonus":0.0,"mvp":77.31},{"p":"D. Jones","ptd":19,"pff":71.7,"wins":8.0,"gp":13,"rtd":5,"bonus":0.0,"mvp":71.87},{"p":"P. Mahomes","ptd":22,"pff":76.0,"wins":6.0,"gp":14,"rtd":5,"bonus":0.0,"mvp":69.75},{"p":"A. Rodgers","ptd":22,"pff":65.7,"wins":8.0,"gp":13,"rtd":1,"bonus":0.0,"mvp":69.32},{"p":"B. Mayfield","ptd":22,"pff":69.8,"wins":7.0,"gp":14,"rtd":1,"bonus":0.0,"mvp":67.61},{"p":"B. Young","ptd":19,"pff":66.9,"wins":7.0,"gp":13,"rtd":1,"bonus":0.0,"mvp":65.43},{"p":"L. Jackson","ptd":18,"pff":67.9,"wins":6.0,"gp":11,"rtd":2,"bonus":0.0,"mvp":60.13},{"p":"T. Tagovailoa","ptd":20,"pff":62.8,"wins":6.0,"gp":14,"rtd":0,"bonus":0.0,"mvp":59.97},{"p":"C.J. Stroud","ptd":15,"pff":70.4,"wins":6.0,"gp":11,"rtd":0,"bonus":0.0,"mvp":58.36},{"p":"C. Ward","ptd":11,"pff":56.1,"wins":2.0,"gp":14,"rtd":1,"bonus":0.0,"mvp":41.69}],"Week14":[{"p":"M. Stafford","ptd":35,"pff":93.6,"wins":10.0,"gp":13,"rtd":0,"bonus":3.6,"mvp":102.14},{"p":"D. Maye","ptd":23,"pff":87.1,"wins":11.0,"gp":13,"rtd":2,"bonus":0.0,"mvp":90.41},{"p":"J. Allen","ptd":22,"pff":85.8,"wins":9.0,"gp":13,"rtd":12,"bonus":0.0,"mvp":87.22},{"p":"J. Love","ptd":22,"pff":89.9,"wins":9.5,"gp":13,"rtd":0,"bonus":0.0,"mvp":86.75},{"p":"S. Darnold","ptd":22,"pff":83.4,"wins":10.0,"gp":13,"rtd":0,"bonus":0.0,"mvp":84.56},{"p":"J. Herbert","ptd":22,"pff":80.9,"wins":9.0,"gp":13,"rtd":1,"bonus":0.0,"mvp":80.99},{"p":"B. Nix","ptd":19,"pff":73.0,"wins":11.0,"gp":13,"rtd":4,"bonus":0.0,"mvp":80.92},{"p":"D. Prescott","ptd":26,"pff":87.2,"wins":6.5,"gp":13,"rtd":2,"bonus":0.0,"mvp":80.9},{"p":"J. Goff","ptd":26,"pff":74.5,"wins":8.0,"gp":13,"rtd":0,"bonus":0.0,"mvp":77.31},{"p":"J. Hurts","ptd":19,"pff":77.7,"wins":8.0,"gp":13,"rtd":8,"bonus":0.0,"mvp":77.05},{"p":"T. Lawrence","ptd":18,"pff":75.1,"wins":9.0,"gp":13,"rtd":5,"bonus":0.0,"mvp":76.59},{"p":"C. Williams","ptd":19,"pff":72.1,"wins":9.0,"gp":13,"rtd":3,"bonus":0.0,"mvp":74.99},{"p":"D. Jones","ptd":19,"pff":71.7,"wins":8.0,"gp":13,"rtd":5,"bonus":0.0,"mvp":72.87},{"p":"P. Mahomes","ptd":22,"pff":76.1,"wins":6.0,"gp":13,"rtd":4,"bonus":0.0,"mvp":71.73},{"p":"B. Mayfield","ptd":20,"pff":69.3,"wins":7.0,"gp":13,"rtd":1,"bonus":0.0,"mvp":68.37},{"p":"A. Rodgers","ptd":20,"pff":64.1,"wins":7.0,"gp":12,"rtd":1,"bonus":0.0,"mvp":67.21},{"p":"B. Young","ptd":18,"pff":64.7,"wins":7.0,"gp":12,"rtd":1,"bonus":0.0,"mvp":66.11},{"p":"T. Tagovailoa","ptd":18,"pff":62.8,"wins":6.0,"gp":13,"rtd":0,"bonus":0.0,"mvp":60.69},{"p":"L. Jackson","ptd":16,"pff":65.8,"wins":5.0,"gp":10,"rtd":2,"bonus":0.0,"mvp":57.27},{"p":"C.J. Stroud","ptd":12,"pff":67.9,"wins":5.0,"gp":10,"rtd":0,"bonus":0.0,"mvp":54.12},{"p":"G. Smith","ptd":16,"pff":61.2,"wins":2.0,"gp":13,"rtd":0,"bonus":0.0,"mvp":48.27}],"Week13":[{"p":"M. Stafford","ptd":32,"pff":92.4,"wins":9.0,"gp":12,"rtd":0,"bonus":3.6,"mvp":100.64},{"p":"D. Maye","ptd":23,"pff":87.1,"wins":11.0,"gp":13,"rtd":2,"bonus":0.0,"mvp":90.41},{"p":"J. Allen","ptd":19,"pff":82.6,"wins":8.0,"gp":12,"rtd":11,"bonus":0.0,"mvp":83.7},{"p":"J. Love","ptd":19,"pff":87.3,"wins":8.5,"gp":12,"rtd":0,"bonus":0.0,"mvp":83.68},{"p":"D. Prescott","ptd":25,"pff":88.2,"wins":6.5,"gp":12,"rtd":2,"bonus":0.0,"mvp":83.58},{"p":"S. Darnold","ptd":19,"pff":82.8,"wins":9.0,"gp":12,"rtd":0,"bonus":0.0,"mvp":82.67},{"p":"J. Herbert","ptd":21,"pff":84.6,"wins":8.0,"gp":12,"rtd":1,"bonus":0.0,"mvp":82.63},{"p":"J. Hurts","ptd":19,"pff":81.3,"wins":8.0,"gp":12,"rtd":8,"bonus":0.0,"mvp":81.94},{"p":"B. Nix","ptd":19,"pff":73.3,"wins":10.0,"gp":12,"rtd":3,"bonus":0.0,"mvp":81.45},{"p":"C. Williams","ptd":17,"pff":72.7,"wins":9.0,"gp":12,"rtd":3,"bonus":0.0,"mvp":76.93},{"p":"D. Jones","ptd":19,"pff":73.4,"wins":8.0,"gp":12,"rtd":5,"bonus":0.0,"mvp":76.66},{"p":"J. Goff","ptd":25,"pff":73.8,"wins":7.0,"gp":12,"rtd":0,"bonus":0.0,"mvp":76.58},{"p":"P. Mahomes","ptd":22,"pff":76.4,"wins":6.0,"gp":12,"rtd":4,"bonus":0.0,"mvp":74.48},{"p":"T. Lawrence","ptd":16,"pff":71.5,"wins":8.0,"gp":12,"rtd":5,"bonus":0.0,"mvp":73.51},{"p":"B. Mayfield","ptd":19,"pff":73.5,"wins":7.0,"gp":12,"rtd":1,"bonus":0.0,"mvp":72.51},{"p":"B. Young","ptd":18,"pff":64.7,"wins":7.0,"gp":12,"rtd":1,"bonus":0.0,"mvp":66.11},{"p":"A. Rodgers","ptd":19,"pff":59.4,"wins":6.0,"gp":11,"rtd":0,"bonus":0.0,"mvp":63.6},{"p":"T. Tagovailoa","ptd":17,"pff":63.5,"wins":5.0,"gp":12,"rtd":0,"bonus":0.0,"mvp":59.84},{"p":"L. Jackson","ptd":15,"pff":62.6,"wins":5.0,"gp":9,"rtd":1,"bonus":0.0,"mvp":57.6},{"p":"C.J. Stroud","ptd":11,"pff":68.8,"wins":4.0,"gp":9,"rtd":0,"bonus":0.0,"mvp":52.94},{"p":"G. Smith","ptd":15,"pff":61.7,"wins":2.0,"gp":12,"rtd":0,"bonus":0.0,"mvp":49.13}],"Week12":[{"p":"M. Stafford","ptd":30,"pff":93.4,"wins":9.0,"gp":11,"rtd":0,"bonus":3.5,"mvp":103.86},{"p":"D. Maye","ptd":21,"pff":84.9,"wins":10.0,"gp":12,"rtd":2,"bonus":0.0,"mvp":88.7},{"p":"S. Darnold","ptd":19,"pff":87.2,"wins":8.0,"gp":11,"rtd":0,"bonus":0.0,"mvp":85.49},{"p":"J. Hurts","ptd":17,"pff":83.2,"wins":8.0,"gp":11,"rtd":8,"bonus":0.0,"mvp":84.91},{"p":"J. Allen","ptd":18,"pff":82.5,"wins":7.0,"gp":11,"rtd":10,"bonus":0.0,"mvp":83.05},{"p":"D. Prescott","ptd":23,"pff":87.7,"wins":5.5,"gp":11,"rtd":2,"bonus":0.0,"mvp":82.06},{"p":"J. Herbert","ptd":19,"pff":85.7,"wins":7.0,"gp":11,"rtd":1,"bonus":0.0,"mvp":82.05},{"p":"B. Nix","ptd":18,"pff":74.0,"wins":9.0,"gp":11,"rtd":3,"bonus":0.0,"mvp":81.87},{"p":"J. Love","ptd":15,"pff":83.5,"wins":7.5,"gp":11,"rtd":0,"bonus":0.0,"mvp":78.9},{"p":"J. Goff","ptd":23,"pff":71.4,"wins":7.0,"gp":11,"rtd":0,"bonus":0.0,"mvp":77.13},{"p":"D. Jones","ptd":17,"pff":70.7,"wins":8.0,"gp":11,"rtd":5,"bonus":0.0,"mvp":77.08},{"p":"C. Williams","ptd":16,"pff":73.1,"wins":8.0,"gp":11,"rtd":3,"bonus":0.0,"mvp":76.8},{"p":"P. Mahomes","ptd":18,"pff":75.6,"wins":6.0,"gp":11,"rtd":4,"bonus":0.0,"mvp":74.02},{"p":"B. Mayfield","ptd":18,"pff":73.6,"wins":6.0,"gp":11,"rtd":1,"bonus":0.0,"mvp":71.79},{"p":"T. Lawrence","ptd":14,"pff":68.7,"wins":7.0,"gp":11,"rtd":5,"bonus":0.0,"mvp":70.65},{"p":"A. Rodgers","ptd":19,"pff":61.3,"wins":6.0,"gp":10,"rtd":0,"bonus":0.0,"mvp":67.91},{"p":"L. Jackson","ptd":15,"pff":67.4,"wins":5.0,"gp":8,"rtd":1,"bonus":0.0,"mvp":64.31},{"p":"B. Young","ptd":15,"pff":62.0,"wins":6.0,"gp":11,"rtd":1,"bonus":0.0,"mvp":62.27},{"p":"T. Tagovailoa","ptd":17,"pff":63.3,"wins":4.0,"gp":11,"rtd":0,"bonus":0.0,"mvp":59.07},{"p":"J. Flacco","ptd":15,"pff":68.4,"wins":2.0,"gp":10,"rtd":1,"bonus":0.0,"mvp":55.37},{"p":"C.J. Stroud","ptd":11,"pff":68.3,"wins":3.0,"gp":8,"rtd":0,"bonus":0.0,"mvp":51.66},{"p":"G. Smith","ptd":13,"pff":62.3,"wins":2.0,"gp":11,"rtd":0,"bonus":0.0,"mvp":49.37}],"Week11":[{"p":"M. Stafford","ptd":27,"pff":92.3,"wins":8.0,"gp":10,"rtd":0,"bonus":3.6,"mvp":102.53},{"p":"D. Maye","ptd":20,"pff":86.0,"wins":9.0,"gp":11,"rtd":2,"bonus":0.0,"mvp":89.43},{"p":"J. Allen","ptd":18,"pff":85.0,"wins":7.0,"gp":10,"rtd":10,"bonus":0.0,"mvp":88.29},{"p":"J. Hurts","ptd":16,"pff":82.9,"wins":8.0,"gp":10,"rtd":6,"bonus":0.0,"mvp":87.09},{"p":"S. Darnold","ptd":17,"pff":88.9,"wins":7.0,"gp":10,"rtd":0,"bonus":0.0,"mvp":85.25},{"p":"J. Herbert","ptd":19,"pff":85.7,"wins":7.0,"gp":11,"rtd":1,"bonus":0.0,"mvp":82.05},{"p":"B. Nix","ptd":18,"pff":74.0,"wins":9.0,"gp":11,"rtd":3,"bonus":0.0,"mvp":81.87},{"p":"D. Jones","ptd":15,"pff":71.9,"wins":8.0,"gp":10,"rtd":5,"bonus":0.0,"mvp":79.95},{"p":"D. Prescott","ptd":21,"pff":87.2,"wins":4.5,"gp":10,"rtd":1,"bonus":0.0,"mvp":79.85},{"p":"J. Love","ptd":15,"pff":84.4,"wins":6.5,"gp":10,"rtd":0,"bonus":0.0,"mvp":79.48},{"p":"C. Williams","ptd":13,"pff":76.9,"wins":7.0,"gp":10,"rtd":3,"bonus":0.0,"mvp":76.72},{"p":"J. Goff","ptd":21,"pff":69.2,"wins":6.0,"gp":10,"rtd":0,"bonus":0.0,"mvp":74.83},{"p":"B. Mayfield","ptd":17,"pff":73.5,"wins":6.0,"gp":10,"rtd":1,"bonus":0.0,"mvp":74.13},{"p":"P. Mahomes","ptd":18,"pff":72.3,"wins":5.0,"gp":10,"rtd":4,"bonus":0.0,"mvp":72.29},{"p":"A. Rodgers","ptd":19,"pff":61.3,"wins":6.0,"gp":10,"rtd":0,"bonus":0.0,"mvp":68.91},{"p":"T. Lawrence","ptd":11,"pff":68.6,"wins":6.0,"gp":10,"rtd":5,"bonus":0.0,"mvp":68.11},{"p":"B. Young","ptd":14,"pff":65.6,"wins":6.0,"gp":10,"rtd":1,"bonus":0.0,"mvp":66.36},{"p":"L. Jackson","ptd":15,"pff":68.0,"wins":4.0,"gp":7,"rtd":1,"bonus":0.0,"mvp":65.21},{"p":"T. Tagovailoa","ptd":17,"pff":63.3,"wins":4.0,"gp":11,"rtd":0,"bonus":0.0,"mvp":59.07},{"p":"J. Flacco","ptd":14,"pff":70.7,"wins":2.0,"gp":9,"rtd":1,"bonus":0.0,"mvp":57.86},{"p":"C.J. Stroud","ptd":11,"pff":68.3,"wins":3.0,"gp":8,"rtd":0,"bonus":0.0,"mvp":57.66},{"p":"G. Smith","ptd":12,"pff":63.4,"wins":2.0,"gp":10,"rtd":0,"bonus":0.0,"mvp":50.72}],"Week10":[{"p":"M. Stafford","ptd":25,"pff":92.5,"wins":7.0,"gp":9,"rtd":0,"bonus":3.6,"mvp":102.56},{"p":"S. Darnold","ptd":17,"pff":93.1,"wins":7.0,"gp":9,"rtd":0,"bonus":0.0,"mvp":91.7},{"p":"D. Maye","ptd":19,"pff":83.6,"wins":8.0,"gp":10,"rtd":2,"bonus":0.0,"mvp":88.32},{"p":"J. Hurts","ptd":16,"pff":81.4,"wins":7.0,"gp":9,"rtd":5,"bonus":0.0,"mvp":86.88},{"p":"J. Herbert","ptd":19,"pff":87.4,"wins":7.0,"gp":10,"rtd":1,"bonus":0.0,"mvp":86.59},{"p":"J. Allen","ptd":15,"pff":85.3,"wins":6.0,"gp":9,"rtd":7,"bonus":0.0,"mvp":85.26},{"p":"B. Nix","ptd":18,"pff":70.6,"wins":8.0,"gp":10,"rtd":3,"bonus":0.0,"mvp":80.96},{"p":"J. Goff","ptd":20,"pff":73.9,"wins":6.0,"gp":9,"rtd":0,"bonus":0.0,"mvp":80.6},{"p":"D. Jones","ptd":15,"pff":71.9,"wins":8.0,"gp":10,"rtd":5,"bonus":0.0,"mvp":79.95},{"p":"B. Mayfield","ptd":16,"pff":75.5,"wins":6.0,"gp":9,"rtd":0,"bonus":0.0,"mvp":77.66},{"p":"P. Mahomes","ptd":17,"pff":76.4,"wins":5.0,"gp":9,"rtd":4,"bonus":0.0,"mvp":77.28},{"p":"C. Williams","ptd":13,"pff":77.0,"wins":6.0,"gp":9,"rtd":3,"bonus":0.0,"mvp":77.04},{"p":"D. Prescott","ptd":17,"pff":87.8,"wins":3.5,"gp":9,"rtd":1,"bonus":0.0,"mvp":76.38},{"p":"J. Love","ptd":13,"pff":79.4,"wins":5.5,"gp":9,"rtd":0,"bonus":0.0,"mvp":75.04},{"p":"M. Jones","ptd":13,"pff":76.8,"wins":5.0,"gp":8,"rtd":0,"bonus":0.0,"mvp":72.66},{"p":"A. Rodgers","ptd":18,"pff":63.6,"wins":5.0,"gp":9,"rtd":0,"bonus":0.0,"mvp":69.51},{"p":"L. Jackson","ptd":15,"pff":71.3,"wins":3.0,"gp":6,"rtd":1,"bonus":0.0,"mvp":67.74},{"p":"T. Lawrence","ptd":10,"pff":69.5,"wins":5.0,"gp":9,"rtd":4,"bonus":0.0,"mvp":66.96},{"p":"J. Flacco","ptd":13,"pff":75.7,"wins":2.0,"gp":8,"rtd":1,"bonus":0.0,"mvp":62.11},{"p":"B. Young","ptd":11,"pff":59.5,"wins":5.0,"gp":9,"rtd":1,"bonus":0.0,"mvp":60.16},{"p":"C.J. Stroud","ptd":11,"pff":68.3,"wins":3.0,"gp":8,"rtd":0,"bonus":0.0,"mvp":59.66},{"p":"T. Tagovailoa","ptd":17,"pff":64.0,"wins":3.0,"gp":10,"rtd":0,"bonus":0.0,"mvp":58.64},{"p":"J. Dart","ptd":10,"pff":71.5,"wins":2.0,"gp":7,"rtd":7,"bonus":0.0,"mvp":55.11},{"p":"G. Smith","ptd":11,"pff":64.0,"wins":2.0,"gp":9,"rtd":0,"bonus":0.0,"mvp":51.97},{"p":"M. Penix Jr.","ptd":9,"pff":56.7,"wins":3.0,"gp":8,"rtd":1,"bonus":0.0,"mvp":51.87},{"p":"J. Fields","ptd":6,"pff":66.1,"wins":2.0,"gp":8,"rtd":3,"bonus":0.0,"mvp":50.59},{"p":"S. Rattler","ptd":8,"pff":70.1,"wins":1.0,"gp":8,"rtd":0,"bonus":0.0,"mvp":47.09},{"p":"C. Ward","ptd":5,"pff":55.0,"wins":1.0,"gp":9,"rtd":0,"bonus":0.0,"mvp":37.78}],"Week9":[{"p":"M. Stafford","ptd":21,"pff":91.7,"wins":6.0,"gp":8,"rtd":0,"bonus":3.6,"mvp":99.91},{"p":"S. Darnold","ptd":16,"pff":93.5,"wins":6.0,"gp":8,"rtd":0,"bonus":2.8,"mvp":94.73},{"p":"J. Allen","ptd":13,"pff":87.9,"wins":6.0,"gp":8,"rtd":7,"bonus":0.2,"mvp":89.68},{"p":"D. Maye","ptd":17,"pff":84.5,"wins":7.0,"gp":9,"rtd":2,"bonus":0.0,"mvp":88.06},{"p":"J. Herbert","ptd":18,"pff":90.4,"wins":6.0,"gp":9,"rtd":1,"bonus":0.0,"mvp":87.98},{"p":"J. Hurts","ptd":15,"pff":82.6,"wins":6.0,"gp":8,"rtd":5,"bonus":0.0,"mvp":87.72},{"p":"D. Jones","ptd":14,"pff":75.8,"wins":7.0,"gp":9,"rtd":5,"bonus":0.0,"mvp":82.0},{"p":"B. Nix","ptd":17,"pff":71.4,"wins":7.0,"gp":9,"rtd":3,"bonus":0.0,"mvp":81.55},{"p":"J. Love","ptd":13,"pff":79.6,"wins":5.5,"gp":8,"rtd":0,"bonus":0.0,"mvp":79.24},{"p":"B. Mayfield","ptd":13,"pff":75.2,"wins":6.0,"gp":8,"rtd":0,"bonus":0.0,"mvp":78.97},{"p":"P. Mahomes","ptd":17,"pff":76.4,"wins":5.0,"gp":9,"rtd":4,"bonus":0.0,"mvp":77.28},{"p":"D. Prescott","ptd":17,"pff":87.8,"wins":3.5,"gp":9,"rtd":1,"bonus":0.0,"mvp":76.38},{"p":"A. Rodgers","ptd":17,"pff":69.5,"wins":5.0,"gp":8,"rtd":0,"bonus":0.0,"mvp":76.03},{"p":"J. Goff","ptd":17,"pff":68.6,"wins":5.0,"gp":8,"rtd":0,"bonus":0.0,"mvp":75.55},{"p":"C. Williams","ptd":12,"pff":74.0,"wins":5.0,"gp":8,"rtd":2,"bonus":0.0,"mvp":74.17},{"p":"M. Jones","ptd":10,"pff":76.4,"wins":5.0,"gp":7,"rtd":0,"bonus":0.0,"mvp":73.75},{"p":"T. Lawrence","ptd":9,"pff":71.7,"wins":5.0,"gp":8,"rtd":4,"bonus":0.0,"mvp":70.81},{"p":"L. Jackson","ptd":14,"pff":69.7,"wins":2.0,"gp":5,"rtd":1,"bonus":0.0,"mvp":66.25},{"p":"B. Young","ptd":11,"pff":63.9,"wins":5.0,"gp":8,"rtd":1,"bonus":0.0,"mvp":66.18},{"p":"J. Flacco","ptd":13,"pff":75.7,"wins":2.0,"gp":8,"rtd":1,"bonus":0.0,"mvp":62.11},{"p":"C.J. Stroud","ptd":11,"pff":68.3,"wins":3.0,"gp":8,"rtd":0,"bonus":0.0,"mvp":60.66},{"p":"J. Dart","ptd":10,"pff":70.1,"wins":2.0,"gp":6,"rtd":5,"bonus":0.0,"mvp":57.28},{"p":"J. Daniels","ptd":8,"pff":76.7,"wins":2.0,"gp":6,"rtd":2,"bonus":0.0,"mvp":55.82},{"p":"T. Tagovailoa","ptd":15,"pff":62.4,"wins":2.0,"gp":9,"rtd":0,"bonus":0.0,"mvp":54.91},{"p":"M. Penix Jr.","ptd":8,"pff":58.3,"wins":3.0,"gp":7,"rtd":1,"bonus":0.0,"mvp":54.74},{"p":"G. Smith","ptd":11,"pff":62.9,"wins":2.0,"gp":8,"rtd":0,"bonus":0.0,"mvp":53.61},{"p":"S. Rattler","ptd":8,"pff":70.1,"wins":1.0,"gp":8,"rtd":0,"bonus":0.0,"mvp":49.09},{"p":"J. Fields","ptd":5,"pff":68.7,"wins":1.0,"gp":7,"rtd":3,"bonus":0.0,"mvp":48.33},{"p":"C. Ward","ptd":5,"pff":55.0,"wins":1.0,"gp":9,"rtd":0,"bonus":0.0,"mvp":37.78}],"Week8":[{"p":"M. Stafford","ptd":17,"pff":91.0,"wins":5.0,"gp":7,"rtd":0,"bonus":1.3,"mvp":94.37},{"p":"D. Maye","ptd":15,"pff":87.1,"wins":6.0,"gp":8,"rtd":2,"bonus":2.3,"mvp":90.82},{"p":"D. Jones","ptd":13,"pff":80.4,"wins":7.0,"gp":8,"rtd":4,"bonus":0.0,"mvp":88.05},{"p":"J. Hurts","ptd":15,"pff":82.6,"wins":6.0,"gp":8,"rtd":5,"bonus":0.0,"mvp":87.72},{"p":"S. Darnold","ptd":12,"pff":92.0,"wins":5.0,"gp":7,"rtd":0,"bonus":0.0,"mvp":87.5},{"p":"J. Allen","ptd":12,"pff":85.7,"wins":5.0,"gp":7,"rtd":5,"bonus":0.0,"mvp":87.19},{"p":"J. Herbert","ptd":16,"pff":90.0,"wins":5.0,"gp":8,"rtd":0,"bonus":0.0,"mvp":85.9},{"p":"J. Love","ptd":13,"pff":81.5,"wins":5.5,"gp":7,"rtd":0,"bonus":0.0,"mvp":85.5},{"p":"P. Mahomes","ptd":17,"pff":78.2,"wins":5.0,"gp":8,"rtd":4,"bonus":0.0,"mvp":82.81},{"p":"B. Nix","ptd":15,"pff":70.9,"wins":6.0,"gp":8,"rtd":3,"bonus":0.0,"mvp":80.41},{"p":"D. Prescott","ptd":16,"pff":88.5,"wins":3.5,"gp":8,"rtd":1,"bonus":0.0,"mvp":79.38},{"p":"B. Mayfield","ptd":13,"pff":75.2,"wins":6.0,"gp":8,"rtd":0,"bonus":0.0,"mvp":78.97},{"p":"J. Goff","ptd":15,"pff":66.5,"wins":5.0,"gp":7,"rtd":0,"bonus":0.0,"mvp":77.56},{"p":"A. Rodgers","ptd":16,"pff":68.0,"wins":4.0,"gp":7,"rtd":0,"bonus":0.0,"mvp":74.82},{"p":"M. Jones","ptd":8,"pff":77.3,"wins":4.0,"gp":6,"rtd":0,"bonus":0.0,"mvp":71.83},{"p":"T. Lawrence","ptd":9,"pff":69.9,"wins":4.0,"gp":7,"rtd":2,"bonus":0.0,"mvp":68.52},{"p":"B. Young","ptd":11,"pff":67.3,"wins":4.0,"gp":7,"rtd":1,"bonus":0.0,"mvp":67.96},{"p":"C. Williams","ptd":9,"pff":67.4,"wins":4.0,"gp":7,"rtd":2,"bonus":0.0,"mvp":67.18},{"p":"C.J. Stroud","ptd":11,"pff":67.7,"wins":3.0,"gp":7,"rtd":0,"bonus":0.0,"mvp":63.8},{"p":"K. Murray","ptd":6,"pff":72.1,"wins":2.0,"gp":5,"rtd":1,"bonus":0.0,"mvp":59.88},{"p":"J. Daniels","ptd":8,"pff":76.5,"wins":2.0,"gp":5,"rtd":1,"bonus":0.0,"mvp":59.64},{"p":"J. Flacco","ptd":9,"pff":72.5,"wins":2.0,"gp":7,"rtd":1,"bonus":0.0,"mvp":58.77},{"p":"J. Dart","ptd":8,"pff":67.3,"wins":2.0,"gp":5,"rtd":4,"bonus":0.0,"mvp":57.29},{"p":"T. Tagovailoa","ptd":15,"pff":60.6,"wins":2.0,"gp":8,"rtd":0,"bonus":0.0,"mvp":56.65},{"p":"L. Jackson","ptd":10,"pff":62.5,"wins":1.0,"gp":4,"rtd":1,"bonus":0.0,"mvp":55.07},{"p":"M. Penix Jr.","ptd":5,"pff":58.4,"wins":3.0,"gp":6,"rtd":1,"bonus":0.0,"mvp":54.64},{"p":"G. Smith","ptd":7,"pff":60.4,"wins":2.0,"gp":7,"rtd":0,"bonus":0.0,"mvp":50.27},{"p":"S. Rattler","ptd":8,"pff":70.1,"wins":1.0,"gp":8,"rtd":0,"bonus":0.0,"mvp":50.09},{"p":"J. Fields","ptd":5,"pff":68.7,"wins":1.0,"gp":7,"rtd":3,"bonus":0.0,"mvp":48.33},{"p":"C. Wentz","ptd":6,"pff":50.4,"wins":2.0,"gp":5,"rtd":0,"bonus":0.0,"mvp":47.45},{"p":"C. Ward","ptd":5,"pff":57.8,"wins":1.0,"gp":8,"rtd":0,"bonus":0.0,"mvp":40.33}],"Week7":[{"p":"M. Stafford","ptd":17,"pff":91.0,"wins":5.0,"gp":7,"rtd":0,"bonus":3.6,"mvp":96.67},{"p":"S. Darnold","ptd":12,"pff":92.0,"wins":5.0,"gp":7,"rtd":0,"bonus":1.6,"mvp":89.1},{"p":"D. Maye","ptd":12,"pff":87.3,"wins":5.0,"gp":7,"rtd":2,"bonus":0.2,"mvp":86.42},{"p":"J. Allen","ptd":11,"pff":85.9,"wins":4.0,"gp":6,"rtd":3,"bonus":0.0,"mvp":85.81},{"p":"D. Prescott","ptd":16,"pff":91.3,"wins":3.5,"gp":7,"rtd":1,"bonus":0.0,"mvp":85.47},{"p":"D. Jones","ptd":10,"pff":79.2,"wins":6.0,"gp":7,"rtd":4,"bonus":0.0,"mvp":85.44},{"p":"J. Hurts","ptd":11,"pff":84.0,"wins":5.0,"gp":7,"rtd":5,"bonus":0.0,"mvp":85.07},{"p":"J. Love","ptd":10,"pff":78.6,"wins":4.5,"gp":6,"rtd":0,"bonus":0.0,"mvp":81.14},{"p":"B. Mayfield","ptd":13,"pff":75.6,"wins":5.0,"gp":7,"rtd":0,"bonus":0.0,"mvp":79.98},{"p":"J. Herbert","ptd":13,"pff":84.5,"wins":4.0,"gp":7,"rtd":0,"bonus":0.0,"mvp":79.96},{"p":"P. Mahomes","ptd":14,"pff":74.8,"wins":4.0,"gp":7,"rtd":4,"bonus":0.0,"mvp":78.45},{"p":"J. Goff","ptd":15,"pff":66.5,"wins":5.0,"gp":7,"rtd":0,"bonus":0.0,"mvp":77.56},{"p":"A. Rodgers","ptd":14,"pff":64.3,"wins":4.0,"gp":6,"rtd":0,"bonus":0.0,"mvp":76.43},{"p":"B. Nix","ptd":11,"pff":66.1,"wins":5.0,"gp":7,"rtd":3,"bonus":0.0,"mvp":74.3},{"p":"M. Jones","ptd":6,"pff":74.5,"wins":4.0,"gp":5,"rtd":0,"bonus":0.0,"mvp":73.64},{"p":"C. Williams","ptd":9,"pff":68.4,"wins":4.0,"gp":6,"rtd":2,"bonus":0.0,"mvp":72.92},{"p":"B. Young","ptd":11,"pff":67.3,"wins":4.0,"gp":7,"rtd":1,"bonus":0.0,"mvp":68.96},{"p":"T. Lawrence","ptd":9,"pff":69.9,"wins":4.0,"gp":7,"rtd":2,"bonus":0.0,"mvp":68.52},{"p":"J. Daniels","ptd":8,"pff":76.5,"wins":2.0,"gp":5,"rtd":1,"bonus":0.0,"mvp":65.64},{"p":"L. Jackson","ptd":10,"pff":62.5,"wins":1.0,"gp":4,"rtd":1,"bonus":0.0,"mvp":61.07},{"p":"K. Murray","ptd":6,"pff":72.1,"wins":2.0,"gp":5,"rtd":1,"bonus":0.0,"mvp":59.88},{"p":"J. Dart","ptd":7,"pff":61.9,"wins":2.0,"gp":4,"rtd":3,"bonus":0.0,"mvp":58.81},{"p":"J. Flacco","ptd":7,"pff":71.7,"wins":2.0,"gp":6,"rtd":0,"bonus":0.0,"mvp":58.31},{"p":"C.J. Stroud","ptd":9,"pff":62.9,"wins":2.0,"gp":6,"rtd":0,"bonus":0.0,"mvp":57.46},{"p":"M. Penix Jr.","ptd":5,"pff":58.4,"wins":3.0,"gp":6,"rtd":1,"bonus":0.0,"mvp":55.64},{"p":"S. Rattler","ptd":8,"pff":75.0,"wins":1.0,"gp":7,"rtd":0,"bonus":0.0,"mvp":54.51},{"p":"C. Wentz","ptd":5,"pff":55.8,"wins":2.0,"gp":4,"rtd":0,"bonus":0.0,"mvp":54.09},{"p":"G. Smith","ptd":7,"pff":60.4,"wins":2.0,"gp":7,"rtd":0,"bonus":0.0,"mvp":50.27},{"p":"T. Tagovailoa","ptd":11,"pff":56.0,"wins":1.0,"gp":7,"rtd":0,"bonus":0.0,"mvp":48.04},{"p":"J. Fields","ptd":4,"pff":64.3,"wins":0.0,"gp":6,"rtd":3,"bonus":0.0,"mvp":41.12},{"p":"C. Ward","ptd":4,"pff":55.5,"wins":1.0,"gp":7,"rtd":0,"bonus":0.0,"mvp":39.24}],"Week6":[{"p":"B. Mayfield","ptd":12,"pff":82.6,"wins":5.0,"gp":6,"rtd":0,"bonus":0.0,"mvp":88.9},{"p":"S. Darnold","ptd":11,"pff":93.7,"wins":4.0,"gp":6,"rtd":0,"bonus":0.0,"mvp":87.84},{"p":"M. Stafford","ptd":12,"pff":90.5,"wins":4.0,"gp":6,"rtd":0,"bonus":0.0,"mvp":87.56},{"p":"J. Allen","ptd":11,"pff":85.9,"wins":4.0,"gp":6,"rtd":3,"bonus":0.0,"mvp":85.81},{"p":"D. Jones","ptd":8,"pff":80.0,"wins":5.0,"gp":6,"rtd":4,"bonus":0.0,"mvp":84.67},{"p":"J. Love","ptd":9,"pff":83.0,"wins":3.5,"gp":5,"rtd":0,"bonus":0.0,"mvp":82.96},{"p":"D. Maye","ptd":10,"pff":83.9,"wins":4.0,"gp":6,"rtd":2,"bonus":0.0,"mvp":82.61},{"p":"D. Prescott","ptd":13,"pff":91.3,"wins":2.5,"gp":6,"rtd":1,"bonus":0.0,"mvp":81.78},{"p":"J. Goff","ptd":14,"pff":74.1,"wins":4.0,"gp":6,"rtd":0,"bonus":0.0,"mvp":81.65},{"p":"J. Herbert","ptd":10,"pff":81.4,"wins":4.0,"gp":6,"rtd":0,"bonus":0.0,"mvp":79.86},{"p":"J. Hurts","ptd":8,"pff":76.4,"wins":4.0,"gp":6,"rtd":5,"bonus":0.0,"mvp":77.9},{"p":"A. Rodgers","ptd":10,"pff":59.1,"wins":4.0,"gp":5,"rtd":0,"bonus":0.0,"mvp":75.25},{"p":"P. Mahomes","ptd":11,"pff":74.7,"wins":3.0,"gp":6,"rtd":4,"bonus":0.0,"mvp":75.0},{"p":"C. Williams","ptd":9,"pff":68.8,"wins":3.0,"gp":5,"rtd":2,"bonus":0.0,"mvp":73.76},{"p":"M. Jones","ptd":6,"pff":72.2,"wins":3.0,"gp":4,"rtd":0,"bonus":0.0,"mvp":73.31},{"p":"T. Lawrence","ptd":8,"pff":68.7,"wins":4.0,"gp":6,"rtd":2,"bonus":0.0,"mvp":71.66},{"p":"B. Nix","ptd":9,"pff":64.4,"wins":4.0,"gp":6,"rtd":1,"bonus":0.0,"mvp":70.08},{"p":"J. Daniels","ptd":7,"pff":76.7,"wins":2.0,"gp":4,"rtd":0,"bonus":0.0,"mvp":69.51},{"p":"B. Young","ptd":10,"pff":68.2,"wins":3.0,"gp":6,"rtd":1,"bonus":0.0,"mvp":67.97},{"p":"C. Wentz","ptd":5,"pff":61.8,"wins":2.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":66.4},{"p":"C.J. Stroud","ptd":8,"pff":71.9,"wins":2.0,"gp":5,"rtd":0,"bonus":0.0,"mvp":65.33},{"p":"J. Dart","ptd":4,"pff":67.4,"wins":2.0,"gp":3,"rtd":2,"bonus":0.0,"mvp":63.39},{"p":"K. Murray","ptd":6,"pff":72.1,"wins":2.0,"gp":5,"rtd":1,"bonus":0.0,"mvp":61.88},{"p":"L. Jackson","ptd":10,"pff":62.5,"wins":1.0,"gp":4,"rtd":1,"bonus":0.0,"mvp":61.07},{"p":"M. Penix Jr.","ptd":4,"pff":58.4,"wins":3.0,"gp":5,"rtd":1,"bonus":0.0,"mvp":58.83},{"p":"S. Rattler","ptd":6,"pff":78.2,"wins":1.0,"gp":6,"rtd":0,"bonus":0.0,"mvp":55.8},{"p":"T. Tagovailoa","ptd":11,"pff":63.2,"wins":1.0,"gp":6,"rtd":0,"bonus":0.0,"mvp":54.91},{"p":"G. Smith","ptd":7,"pff":61.1,"wins":2.0,"gp":6,"rtd":0,"bonus":0.0,"mvp":53.65},{"p":"J.J. McCarthy","ptd":2,"pff":55.5,"wins":1.0,"gp":2,"rtd":1,"bonus":0.0,"mvp":47.93},{"p":"J. Fields","ptd":4,"pff":68.3,"wins":0.0,"gp":5,"rtd":3,"bonus":0.0,"mvp":44.81},{"p":"C. Ward","ptd":3,"pff":55.5,"wins":1.0,"gp":6,"rtd":0,"bonus":0.0,"mvp":39.42}],"Week5":[{"p":"J. Allen","ptd":9,"pff":86.3,"wins":4.0,"gp":5,"rtd":3,"bonus":3.6,"mvp":94.21},{"p":"B. Mayfield","ptd":10,"pff":81.0,"wins":4.0,"gp":5,"rtd":0,"bonus":0.6,"mvp":87.53},{"p":"M. Stafford","ptd":11,"pff":91.1,"wins":3.0,"gp":5,"rtd":0,"bonus":0.0,"mvp":87.36},{"p":"M. Jones","ptd":6,"pff":71.1,"wins":3.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":85.32},{"p":"J. Goff","ptd":12,"pff":70.2,"wins":4.0,"gp":5,"rtd":0,"bonus":0.0,"mvp":84.59},{"p":"J. Hurts","ptd":7,"pff":79.6,"wins":4.0,"gp":5,"rtd":4,"bonus":0.0,"mvp":84.48},{"p":"S. Darnold","ptd":9,"pff":91.2,"wins":3.0,"gp":5,"rtd":0,"bonus":0.0,"mvp":84.0},{"p":"D. Prescott","ptd":10,"pff":90.8,"wins":2.5,"gp":5,"rtd":1,"bonus":0.0,"mvp":83.01},{"p":"D. Jones","ptd":6,"pff":81.0,"wins":4.0,"gp":5,"rtd":3,"bonus":0.0,"mvp":82.67},{"p":"J. Love","ptd":8,"pff":82.6,"wins":2.5,"gp":4,"rtd":0,"bonus":0.0,"mvp":81.95},{"p":"J. Herbert","ptd":8,"pff":82.5,"wins":3.0,"gp":5,"rtd":0,"bonus":0.0,"mvp":77.65},{"p":"D. Maye","ptd":7,"pff":77.6,"wins":3.0,"gp":5,"rtd":2,"bonus":0.0,"mvp":75.04},{"p":"C. Williams","ptd":8,"pff":75.0,"wins":2.0,"gp":4,"rtd":1,"bonus":0.0,"mvp":74.8},{"p":"T. Lawrence","ptd":6,"pff":67.1,"wins":4.0,"gp":5,"rtd":2,"bonus":0.0,"mvp":74.4},{"p":"J. Daniels","ptd":4,"pff":78.5,"wins":2.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":72.47},{"p":"A. Rodgers","ptd":8,"pff":50.4,"wins":3.0,"gp":4,"rtd":0,"bonus":0.0,"mvp":68.95},{"p":"P. Mahomes","ptd":8,"pff":73.2,"wins":2.0,"gp":5,"rtd":3,"bonus":0.0,"mvp":68.59},{"p":"C. Wentz","ptd":5,"pff":61.8,"wins":2.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":66.4},{"p":"B. Nix","ptd":8,"pff":59.3,"wins":3.0,"gp":5,"rtd":1,"bonus":0.0,"mvp":66.13},{"p":"C.J. Stroud","ptd":8,"pff":71.9,"wins":2.0,"gp":5,"rtd":0,"bonus":0.0,"mvp":65.33},{"p":"L. Jackson","ptd":10,"pff":62.5,"wins":1.0,"gp":4,"rtd":1,"bonus":0.0,"mvp":63.07},{"p":"K. Murray","ptd":6,"pff":72.1,"wins":2.0,"gp":5,"rtd":1,"bonus":0.0,"mvp":62.88},{"p":"B. Purdy","ptd":4,"pff":66.7,"wins":1.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":60.31},{"p":"B. Young","ptd":7,"pff":63.8,"wins":2.0,"gp":5,"rtd":1,"bonus":0.0,"mvp":60.16},{"p":"T. Tagovailoa","ptd":10,"pff":65.5,"wins":1.0,"gp":5,"rtd":0,"bonus":0.0,"mvp":58.67},{"p":"M. Penix Jr.","ptd":3,"pff":61.1,"wins":2.0,"gp":4,"rtd":1,"bonus":0.0,"mvp":56.72},{"p":"S. Rattler","ptd":6,"pff":70.5,"wins":1.0,"gp":5,"rtd":0,"bonus":0.0,"mvp":54.51},{"p":"J. Dart","ptd":3,"pff":53.1,"wins":1.0,"gp":2,"rtd":1,"bonus":0.0,"mvp":50.92},{"p":"J. Fields","ptd":4,"pff":71.9,"wins":0.0,"gp":4,"rtd":3,"bonus":0.0,"mvp":49.08},{"p":"G. Smith","ptd":6,"pff":59.4,"wins":1.0,"gp":5,"rtd":0,"bonus":0.0,"mvp":48.59},{"p":"J.J. McCarthy","ptd":2,"pff":55.5,"wins":1.0,"gp":2,"rtd":1,"bonus":0.0,"mvp":47.93},{"p":"J. Flacco","ptd":2,"pff":60.2,"wins":1.0,"gp":4,"rtd":0,"bonus":0.0,"mvp":43.71},{"p":"J. Browning","ptd":6,"pff":50.5,"wins":0.0,"gp":3,"rtd":1,"bonus":0.0,"mvp":43.42},{"p":"C. Ward","ptd":2,"pff":56.7,"wins":1.0,"gp":5,"rtd":0,"bonus":0.0,"mvp":40.32}],"Week4":[{"p":"J. Allen","ptd":7,"pff":84.9,"wins":4.0,"gp":4,"rtd":3,"bonus":3.6,"mvp":100.35},{"p":"M. Stafford","ptd":8,"pff":90.6,"wins":3.0,"gp":4,"rtd":0,"bonus":0.0,"mvp":90.39},{"p":"J. Hurts","ptd":5,"pff":75.3,"wins":4.0,"gp":4,"rtd":4,"bonus":0.0,"mvp":88.43},{"p":"S. Darnold","ptd":5,"pff":91.1,"wins":3.0,"gp":4,"rtd":0,"bonus":0.0,"mvp":84.25},{"p":"J. Love","ptd":8,"pff":82.6,"wins":2.5,"gp":4,"rtd":0,"bonus":0.0,"mvp":81.95},{"p":"J. Herbert","ptd":7,"pff":78.6,"wins":3.0,"gp":4,"rtd":0,"bonus":0.0,"mvp":81.85},{"p":"J. Goff","ptd":9,"pff":69.2,"wins":3.0,"gp":4,"rtd":0,"bonus":0.0,"mvp":81.11},{"p":"B. Mayfield","ptd":8,"pff":72.6,"wins":3.0,"gp":4,"rtd":0,"bonus":0.0,"mvp":80.79},{"p":"D. Jones","ptd":4,"pff":80.0,"wins":3.0,"gp":4,"rtd":3,"bonus":0.0,"mvp":79.4},{"p":"D. Prescott","ptd":6,"pff":91.2,"wins":1.5,"gp":4,"rtd":1,"bonus":0.0,"mvp":75.01},{"p":"C. Williams","ptd":8,"pff":75.0,"wins":2.0,"gp":4,"rtd":1,"bonus":0.0,"mvp":74.8},{"p":"D. Maye","ptd":7,"pff":73.9,"wins":2.0,"gp":4,"rtd":2,"bonus":0.0,"mvp":73.15},{"p":"P. Mahomes","ptd":7,"pff":72.4,"wins":2.0,"gp":4,"rtd":2,"bonus":0.0,"mvp":72.35},{"p":"T. Lawrence","ptd":5,"pff":63.1,"wins":3.0,"gp":4,"rtd":0,"bonus":0.0,"mvp":69.32},{"p":"A. Rodgers","ptd":8,"pff":50.4,"wins":3.0,"gp":4,"rtd":0,"bonus":0.0,"mvp":68.95},{"p":"K. Murray","ptd":6,"pff":72.7,"wins":2.0,"gp":4,"rtd":0,"bonus":0.0,"mvp":68.24},{"p":"B. Purdy","ptd":4,"pff":66.7,"wins":1.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":66.31},{"p":"J. Daniels","ptd":3,"pff":71.0,"wins":1.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":64.33},{"p":"L. Jackson","ptd":10,"pff":62.5,"wins":1.0,"gp":4,"rtd":1,"bonus":0.0,"mvp":64.07},{"p":"B. Nix","ptd":7,"pff":55.1,"wins":2.0,"gp":4,"rtd":1,"bonus":0.0,"mvp":62.05},{"p":"C. Wentz","ptd":4,"pff":58.0,"wins":1.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":61.67},{"p":"M. Penix Jr.","ptd":3,"pff":61.1,"wins":2.0,"gp":4,"rtd":1,"bonus":0.0,"mvp":56.72},{"p":"J.J. McCarthy","ptd":2,"pff":55.5,"wins":1.0,"gp":2,"rtd":1,"bonus":0.0,"mvp":53.93},{"p":"G. Smith","ptd":6,"pff":60.9,"wins":1.0,"gp":4,"rtd":0,"bonus":0.0,"mvp":53.61},{"p":"B. Young","ptd":5,"pff":61.7,"wins":1.0,"gp":4,"rtd":1,"bonus":0.0,"mvp":52.97},{"p":"C.J. Stroud","ptd":4,"pff":67.6,"wins":1.0,"gp":4,"rtd":0,"bonus":0.0,"mvp":52.92},{"p":"T. Tagovailoa","ptd":7,"pff":54.1,"wins":1.0,"gp":4,"rtd":0,"bonus":0.0,"mvp":52.12},{"p":"S. Rattler","ptd":5,"pff":68.1,"wins":0.0,"gp":4,"rtd":0,"bonus":0.0,"mvp":46.99},{"p":"J. Browning","ptd":3,"pff":59.7,"wins":0.0,"gp":2,"rtd":1,"bonus":0.0,"mvp":44.77},{"p":"J. Flacco","ptd":2,"pff":60.2,"wins":1.0,"gp":4,"rtd":0,"bonus":0.0,"mvp":44.71},{"p":"J. Fields","ptd":2,"pff":64.7,"wins":0.0,"gp":3,"rtd":3,"bonus":0.0,"mvp":43.46},{"p":"R. Wilson","ptd":3,"pff":65.6,"wins":0.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":42.52},{"p":"C. Ward","ptd":2,"pff":52.8,"wins":0.0,"gp":4,"rtd":0,"bonus":0.0,"mvp":32.43}],"Week3":[{"p":"J. Allen","ptd":5,"pff":87.1,"wins":3.0,"gp":3,"rtd":2,"bonus":3.6,"mvp":100.45},{"p":"J. Herbert","ptd":6,"pff":80.8,"wins":3.0,"gp":3,"rtd":0,"bonus":0.9,"mvp":94.39},{"p":"D. Jones","ptd":3,"pff":85.0,"wins":3.0,"gp":3,"rtd":3,"bonus":1.8,"mvp":93.27},{"p":"B. Mayfield","ptd":6,"pff":75.7,"wins":3.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":90.77},{"p":"J. Hurts","ptd":3,"pff":79.2,"wins":3.0,"gp":3,"rtd":4,"bonus":0.0,"mvp":89.8},{"p":"M. Jones","ptd":4,"pff":71.1,"wins":2.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":87.32},{"p":"B. Purdy","ptd":2,"pff":69.4,"wins":1.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":84.41},{"p":"M. Stafford","ptd":5,"pff":89.7,"wins":2.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":84.28},{"p":"J. Burrow","ptd":2,"pff":78.8,"wins":2.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":82.89},{"p":"S. Darnold","ptd":4,"pff":91.9,"wins":2.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":82.61},{"p":"C. Wentz","ptd":2,"pff":61.4,"wins":1.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":80.15},{"p":"J. Love","ptd":5,"pff":79.6,"wins":2.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":78.9},{"p":"J. Goff","ptd":7,"pff":68.4,"wins":2.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":78.61},{"p":"K. Murray","ptd":4,"pff":80.8,"wins":2.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":76.69},{"p":"L. Jackson","ptd":9,"pff":68.1,"wins":1.0,"gp":3,"rtd":1,"bonus":0.0,"mvp":74.45},{"p":"C. Williams","ptd":7,"pff":78.1,"wins":1.0,"gp":3,"rtd":1,"bonus":0.0,"mvp":74.1},{"p":"A. Rodgers","ptd":7,"pff":48.6,"wins":2.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":68.05},{"p":"D. Prescott","ptd":3,"pff":90.2,"wins":1.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":67.75},{"p":"T. Lawrence","ptd":4,"pff":63.4,"wins":2.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":67.41},{"p":"J. Daniels","ptd":3,"pff":71.0,"wins":1.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":66.33},{"p":"D. Maye","ptd":5,"pff":71.2,"wins":1.0,"gp":3,"rtd":1,"bonus":0.0,"mvp":64.73},{"p":"P. Mahomes","ptd":3,"pff":71.9,"wins":1.0,"gp":3,"rtd":2,"bonus":0.0,"mvp":60.84},{"p":"G. Smith","ptd":4,"pff":69.8,"wins":1.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":59.72},{"p":"B. Young","ptd":4,"pff":64.0,"wins":1.0,"gp":3,"rtd":1,"bonus":0.0,"mvp":58.04},{"p":"J.J. McCarthy","ptd":2,"pff":55.5,"wins":1.0,"gp":2,"rtd":1,"bonus":0.0,"mvp":55.93},{"p":"B. Nix","ptd":5,"pff":44.6,"wins":1.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":49.12},{"p":"J. Flacco","ptd":2,"pff":59.2,"wins":1.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":48.37},{"p":"S. Rattler","ptd":4,"pff":66.2,"wins":0.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":46.68},{"p":"R. Wilson","ptd":3,"pff":65.6,"wins":0.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":43.52},{"p":"M. Penix Jr.","ptd":1,"pff":51.4,"wins":1.0,"gp":3,"rtd":1,"bonus":0.0,"mvp":42.79},{"p":"T. Tagovailoa","ptd":5,"pff":52.9,"wins":0.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":42.44},{"p":"J. Fields","ptd":1,"pff":64.4,"wins":0.0,"gp":2,"rtd":2,"bonus":0.0,"mvp":41.88},{"p":"C.J. Stroud","ptd":2,"pff":64.0,"wins":0.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":39.82},{"p":"C. Ward","ptd":2,"pff":58.4,"wins":0.0,"gp":3,"rtd":0,"bonus":0.0,"mvp":36.84}],"Week2":[{"p":"J. Love","ptd":4,"pff":86.7,"wins":2.0,"gp":2,"rtd":0,"bonus":3.6,"mvp":100.24},{"p":"M. Stafford","ptd":3,"pff":91.5,"wins":2.0,"gp":2,"rtd":0,"bonus":3.6,"mvp":98.53},{"p":"J. Herbert","ptd":5,"pff":80.1,"wins":2.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":97.39},{"p":"J. Allen","ptd":2,"pff":86.6,"wins":2.0,"gp":2,"rtd":2,"bonus":2.1,"mvp":94.42},{"p":"D. Jones","ptd":2,"pff":79.9,"wins":2.0,"gp":2,"rtd":3,"bonus":0.0,"mvp":90.88},{"p":"B. Mayfield","ptd":5,"pff":67.2,"wins":2.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":90.51},{"p":"M. Jones","ptd":3,"pff":58.6,"wins":1.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":89.19},{"p":"K. Murray","ptd":3,"pff":75.8,"wins":2.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":86.56},{"p":"B. Purdy","ptd":2,"pff":69.4,"wins":1.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":86.41},{"p":"J. Burrow","ptd":2,"pff":78.8,"wins":2.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":83.89},{"p":"L. Jackson","ptd":6,"pff":73.3,"wins":1.0,"gp":2,"rtd":1,"bonus":0.0,"mvp":83.49},{"p":"J. Hurts","ptd":0,"pff":78.6,"wins":2.0,"gp":2,"rtd":3,"bonus":0.0,"mvp":81.65},{"p":"J. Goff","ptd":6,"pff":64.7,"wins":1.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":76.77},{"p":"D. Maye","ptd":3,"pff":78.0,"wins":1.0,"gp":2,"rtd":1,"bonus":0.0,"mvp":73.2},{"p":"D. Prescott","ptd":2,"pff":89.9,"wins":1.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":73.15},{"p":"S. Darnold","ptd":2,"pff":86.8,"wins":1.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":71.49},{"p":"A. Rodgers","ptd":5,"pff":58.3,"wins":1.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":69.09},{"p":"J. Daniels","ptd":3,"pff":71.0,"wins":1.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":67.33},{"p":"T. Lawrence","ptd":4,"pff":60.5,"wins":1.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":66.0},{"p":"M. Penix Jr.","ptd":1,"pff":69.6,"wins":1.0,"gp":2,"rtd":1,"bonus":0.0,"mvp":60.19},{"p":"J.J. McCarthy","ptd":2,"pff":55.5,"wins":1.0,"gp":2,"rtd":1,"bonus":0.0,"mvp":56.93},{"p":"B. Nix","ptd":4,"pff":40.9,"wins":1.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":55.55},{"p":"S. Rattler","ptd":3,"pff":79.7,"wins":0.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":55.31},{"p":"C. Williams","ptd":3,"pff":74.7,"wins":0.0,"gp":2,"rtd":1,"bonus":0.0,"mvp":54.77},{"p":"P. Mahomes","ptd":2,"pff":77.7,"wins":0.0,"gp":2,"rtd":2,"bonus":0.0,"mvp":54.24},{"p":"G. Smith","ptd":1,"pff":60.2,"wins":1.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":53.04},{"p":"R. Wilson","ptd":3,"pff":73.6,"wins":0.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":52.05},{"p":"B. Young","ptd":4,"pff":63.3,"wins":0.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":50.83},{"p":"J. Fields","ptd":1,"pff":64.4,"wins":0.0,"gp":2,"rtd":2,"bonus":0.0,"mvp":42.88},{"p":"T. Tagovailoa","ptd":3,"pff":56.3,"wins":0.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":42.83},{"p":"J. Flacco","ptd":2,"pff":57.7,"wins":0.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":39.31},{"p":"C. Ward","ptd":1,"pff":64.0,"wins":0.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":38.4},{"p":"C.J. Stroud","ptd":1,"pff":63.5,"wins":0.0,"gp":2,"rtd":0,"bonus":0.0,"mvp":38.13}],"Week1":[{"p":"J. Allen","ptd":2,"pff":87.0,"wins":1.0,"gp":1,"rtd":2,"bonus":1.5,"mvp":106.83},{"p":"J. Herbert","ptd":3,"pff":84.0,"wins":1.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":103.73},{"p":"A. Rodgers","ptd":4,"pff":54.5,"wins":1.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":96.53},{"p":"M. Stafford","ptd":1,"pff":92.9,"wins":1.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":91.41},{"p":"J. Love","ptd":2,"pff":76.3,"wins":1.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":91.09},{"p":"B. Mayfield","ptd":3,"pff":57.0,"wins":1.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":89.33},{"p":"D. Jones","ptd":1,"pff":72.8,"wins":1.0,"gp":1,"rtd":2,"bonus":0.0,"mvp":89.23},{"p":"J. Hurts","ptd":0,"pff":88.6,"wins":1.0,"gp":1,"rtd":2,"bonus":0.0,"mvp":89.12},{"p":"J.J. McCarthy","ptd":2,"pff":63.3,"wins":1.0,"gp":1,"rtd":1,"bonus":0.0,"mvp":88.43},{"p":"B. Purdy","ptd":2,"pff":69.4,"wins":1.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":87.41},{"p":"J. Daniels","ptd":1,"pff":83.9,"wins":1.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":86.61},{"p":"G. Smith","ptd":1,"pff":83.8,"wins":1.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":86.56},{"p":"K. Murray","ptd":2,"pff":65.5,"wins":1.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":85.33},{"p":"J. Burrow","ptd":1,"pff":75.6,"wins":1.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":82.19},{"p":"T. Lawrence","ptd":1,"pff":63.0,"wins":1.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":75.47},{"p":"L. Jackson","ptd":2,"pff":79.2,"wins":0.0,"gp":1,"rtd":1,"bonus":0.0,"mvp":63.57},{"p":"B. Nix","ptd":1,"pff":40.5,"wins":1.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":63.47},{"p":"J. Fields","ptd":1,"pff":82.2,"wins":0.0,"gp":1,"rtd":2,"bonus":0.0,"mvp":60.91},{"p":"P. Mahomes","ptd":1,"pff":79.0,"wins":0.0,"gp":1,"rtd":1,"bonus":0.0,"mvp":54.93},{"p":"C. Williams","ptd":1,"pff":77.1,"wins":0.0,"gp":1,"rtd":1,"bonus":0.0,"mvp":53.92},{"p":"M. Penix Jr.","ptd":1,"pff":68.9,"wins":0.0,"gp":1,"rtd":1,"bonus":0.0,"mvp":49.55},{"p":"D. Prescott","ptd":0,"pff":90.0,"wins":0.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":48.0},{"p":"J. Flacco","ptd":1,"pff":73.1,"wins":0.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":47.52},{"p":"B. Young","ptd":1,"pff":71.1,"wins":0.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":46.45},{"p":"D. Maye","ptd":1,"pff":69.3,"wins":0.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":45.49},{"p":"S. Darnold","ptd":0,"pff":82.6,"wins":0.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":44.05},{"p":"S. Rattler","ptd":0,"pff":77.3,"wins":0.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":41.23},{"p":"C.J. Stroud","ptd":0,"pff":73.1,"wins":0.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":38.99},{"p":"T. Tagovailoa","ptd":1,"pff":52.5,"wins":0.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":36.53},{"p":"J. Goff","ptd":1,"pff":45.5,"wins":0.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":32.8},{"p":"C. Ward","ptd":0,"pff":57.4,"wins":0.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":30.61},{"p":"R. Wilson","ptd":0,"pff":54.1,"wins":0.0,"gp":1,"rtd":0,"bonus":0.0,"mvp":28.85}]};
+
+const historicMVPs=[{yr:2006,player:"P. Manning",score:96.3,ptd:31,pff:93.9,wins:12,rtd:4},{yr:2007,player:"T. Brady",score:111.2,ptd:50,pff:95.0,wins:16,rtd:2},{yr:2008,player:"P. Manning",score:91.3,ptd:27,pff:90.6,wins:12,rtd:0},{yr:2009,player:"P. Manning",score:96.9,ptd:33,pff:87.2,wins:14,rtd:0},{yr:2010,player:"T. Brady",score:99.3,ptd:36,pff:88.3,wins:14,rtd:1},{yr:2011,player:"A. Rodgers",score:107.9,ptd:45,pff:92.9,wins:14,rtd:3},{yr:2012,player:"P. Manning",score:99.1,ptd:37,pff:91.3,wins:13,rtd:0},{yr:2013,player:"P. Manning",score:107.2,ptd:55,pff:92.4,wins:13,rtd:1},{yr:2014,player:"A. Rodgers",score:99.2,ptd:38,pff:93.3,wins:12,rtd:2},{yr:2015,player:"C. Newton",score:99.7,ptd:35,pff:83.8,wins:15,rtd:10},{yr:2016,player:"M. Ryan",score:95.1,ptd:38,pff:91.1,wins:11,rtd:0},{yr:2017,player:"T. Brady",score:97.3,ptd:32,pff:92.9,wins:13,rtd:0},{yr:2018,player:"P. Mahomes",score:101.9,ptd:50,pff:93.2,wins:12,rtd:2},{yr:2019,player:"L. Jackson",score:103.6,ptd:36,pff:91.2,wins:13,rtd:7},{yr:2020,player:"A. Rodgers",score:105.0,ptd:48,pff:94.5,wins:13,rtd:3},{yr:2021,player:"A. Rodgers",score:98.8,ptd:37,pff:89.6,wins:13,rtd:3},{yr:2022,player:"P. Mahomes",score:101.3,ptd:41,pff:91.3,wins:14,rtd:4},{yr:2023,player:"L. Jackson",score:93.0,ptd:24,pff:90.4,wins:13,rtd:5},{yr:2024,player:"J. Allen",score:97.8,ptd:28,pff:91.8,wins:13,rtd:12},{yr:2025,player:"M. Stafford",score:97.3,ptd:46,pff:93.5,wins:12,rtd:0}];
+
+const histAll=[{player:"D. Brees",pff:85.4,ptd:26,mvpWin:false},{player:"T. Brady (07)",pff:77.4,ptd:24,mvpWin:false},{player:"P. Manning (07)",pff:95.0,ptd:31,mvpWin:false},{player:"D. Brees (09)",pff:89.2,ptd:34,mvpWin:false},{player:"M. Ryan (10)",pff:85.0,ptd:28,mvpWin:false},{player:"D. Brees (11)",pff:93.0,ptd:46,mvpWin:false},{player:"T. Brady (12)",pff:90.6,ptd:34,mvpWin:false},{player:"D. Brees (13)",pff:85.5,ptd:39,mvpWin:false},{player:"T. Romo (14)",pff:83.2,ptd:34,mvpWin:false},{player:"C. Palmer (15)",pff:92.1,ptd:35,mvpWin:false},{player:"A. Rodgers (16)",pff:90.4,ptd:40,mvpWin:false},{player:"B. Roethlis (17)",pff:87.7,ptd:28,mvpWin:false},{player:"D. Brees (18)",pff:94.7,ptd:32,mvpWin:false},{player:"R. Wilson (19)",pff:91.1,ptd:31,mvpWin:false},{player:"P. Mahomes (20)",pff:91.4,ptd:38,mvpWin:false},{player:"T. Brady (21)",pff:92.0,ptd:43,mvpWin:false},{player:"J. Allen (22)",pff:91.6,ptd:35,mvpWin:false},{player:"D. Prescott (23)",pff:90.8,ptd:36,mvpWin:false},{player:"L. Jackson (24)",pff:94.0,ptd:41,mvpWin:false}];
+
+// ─── trend: top 5 players by Week 18 mvp score
+const TOP5 = ["M. Stafford","D. Maye","J. Allen","T. Lawrence","S. Darnold"];
+const TOP5_COLORS = ["#f4c24a","#22c55e","#3b82f6","#f97316","#a855f7"];
+const WEEK_KEYS = ["Week1","Week2","Week3","Week4","Week5","Week6","Week7","Week8","Week9","Week10","Week11","Week12","Week13","Week14","Week15","Week16","Week17","Week18"];
+const WEEK_LABELS = WEEK_KEYS.map(w=>w.replace("Week","Wk "));
+
+function getMvpForPlayer(weekKey, playerName) {
+  const arr = weeksData[weekKey] || [];
+  const r = arr.find(x=>x.p===playerName);
+  return r ? r.mvp : null;
+}
+
+function calcMVP(pff,wins,gp,ptd,rtd,bonus){
+  return (((pff*2)+((wins/gp)*125)+((ptd/gp)*32)+((rtd/gp)*16))/3.75)+bonus;
+}
+
+// ─── CHARTS
+let charts={};
+
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['current','formula','history','stats'][i]===t));
+  document.querySelectorAll('.panel').forEach(el=>el.classList.remove('active'));
+  document.getElementById('panel-'+t).classList.add('active');
+  if(t==='history'&&!charts.hist) renderHistory();
+  if(t==='stats'&&!charts.scatter) renderStats();
+  if(t==='formula') calcFormula();
+}
+
+function populateWeekSel(){
+  const sel=document.getElementById('weekSel');
+  [...WEEK_KEYS].reverse().forEach((w,i)=>{
+    const o=document.createElement('option');
+    o.value=w; o.textContent=w.replace('Week','Week ');
+    if(i===0) o.selected=true;
+    sel.appendChild(o);
+  });
+}
+
+function renderCurrent(){
+  const wk=document.getElementById('weekSel').value;
+  const data=weeksData[wk]||weeksData['Week18'];
+  const top=data[0];
+  const avgPff=(data.slice(0,5).reduce((a,b)=>a+b.pff,0)/5).toFixed(1);
+  document.getElementById('metricRow').innerHTML=`
+    <div class="metric-card"><div class="metric-label">MVP leader</div><div class="metric-val" style="font-size:18px;line-height:1.2">${top.p}</div><div class="metric-sub">MVP+ ${top.mvp.toFixed(1)}</div></div>
+    <div class="metric-card"><div class="metric-label">Leader PFF grade</div><div class="metric-val">${top.pff}</div><div class="metric-sub">Top efficiency score</div></div>
+    <div class="metric-card"><div class="metric-label">Leader pass TDs</div><div class="metric-val">${top.ptd}</div><div class="metric-sub">Passing touchdowns</div></div>
+    <div class="metric-card"><div class="metric-label">Leader wins</div><div class="metric-val">${top.wins}</div><div class="metric-sub">Avg PFF top 5: ${avgPff}</div></div>
+  `;
+  const rankCls=['rank-1','rank-2','rank-3'];
+  document.getElementById('leaderboard').innerHTML=data.map((d,i)=>{
+    const rc=i<3?rankCls[i]:'rank-other';
+    const pffComponent=((d.pff*2)/3.75).toFixed(1);
+    const winsComponent=(((d.wins/d.gp)*125)/3.75).toFixed(1);
+    const ptdComponent=(((d.ptd/d.gp)*32)/3.75).toFixed(1);
+    const rtdComponent=(((d.rtd/d.gp)*16)/3.75).toFixed(1);
+    const total=calcMVP(d.pff,d.wins,d.gp,d.ptd,d.rtd,d.bonus);
+    const maxComp=Math.max(+pffComponent,+winsComponent,+ptdComponent,+rtdComponent);
+    return`<div class="player-row${i===0?' top-player':''}" onclick="toggleBreakdown(${i})">
+      <div class="rank-num ${rc}">${i+1}</div>
+      <div class="player-name">${d.p}</div>
+      <div class="player-stats">
+        <span class="stat-chip sc-pff">PFF ${d.pff}</span>
+        <span class="stat-chip sc-td">PTD ${d.ptd}</span>
+        <span class="stat-chip">W ${d.wins}/${d.gp}</span>
+        ${d.rtd?`<span class="stat-chip sc-rtd">RTD ${d.rtd}</span>`:''}
+        ${d.bonus?`<span class="stat-chip sc-bonus">+${d.bonus} bonus</span>`:''}
+      </div>
+      <div class="mvp-col">
+        <div class="mvp-score">${d.mvp.toFixed(1)}</div>
+        <div class="mvp-score-label">MVP+</div>
+      </div>
+    </div>
+    <div class="breakdown-panel" id="bd-${i}">
+      <div class="breakdown-title">Formula breakdown — ${d.p}</div>
+      <div class="breakdown-grid">
+        <div class="bd-item"><div class="bd-label">PFF×2÷3.75</div><div class="bd-val" style="color:#60a5fa">${pffComponent}</div><div class="bd-sub">PFF component</div></div>
+        <div class="bd-item"><div class="bd-label">(W/GP)×125÷3.75</div><div class="bd-val" style="color:#22c55e">${winsComponent}</div><div class="bd-sub">Wins component</div></div>
+        <div class="bd-item"><div class="bd-label">(PTD/GP)×32÷3.75</div><div class="bd-val" style="color:#f4c24a">${ptdComponent}</div><div class="bd-sub">Pass TD component</div></div>
+        <div class="bd-item"><div class="bd-label">(RTD/GP)×16÷3.75</div><div class="bd-val" style="color:#f97316">${rtdComponent}</div><div class="bd-sub">Rush TD component</div></div>
+        <div class="bd-item"><div class="bd-label">Bonus</div><div class="bd-val" style="color:#a855f7">+${d.bonus.toFixed(1)}</div><div class="bd-sub">Team/narrative</div></div>
+      </div>
+      <div class="breakdown-bar">
+        <div class="bbar-label"><span>Component contribution</span><span>Total: ${total.toFixed(2)}</span></div>
+        <div class="bbar-bg">
+          <div class="bbar-seg" style="width:${(+pffComponent/total*100).toFixed(1)}%;background:#60a5fa" title="PFF: ${pffComponent}"></div>
+          <div class="bbar-seg" style="width:${(+winsComponent/total*100).toFixed(1)}%;background:#22c55e" title="Wins: ${winsComponent}"></div>
+          <div class="bbar-seg" style="width:${(+ptdComponent/total*100).toFixed(1)}%;background:#f4c24a" title="Pass TD: ${ptdComponent}"></div>
+          <div class="bbar-seg" style="width:${(+rtdComponent/total*100).toFixed(1)}%;background:#f97316" title="Rush TD: ${rtdComponent}"></div>
+          <div class="bbar-seg" style="width:${(d.bonus/total*100).toFixed(1)}%;background:#a855f7" title="Bonus: ${d.bonus}"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  if(!charts.trend) renderTrend();
+}
+
+function toggleBreakdown(i){
+  const el=document.getElementById('bd-'+i);
+  const row=el.previousElementSibling;
+  const isOpen=el.classList.contains('open');
+  document.querySelectorAll('.breakdown-panel').forEach(p=>p.classList.remove('open'));
+  document.querySelectorAll('.player-row').forEach(r=>r.classList.remove('expanded'));
+  if(!isOpen){el.classList.add('open');row.classList.add('expanded');}
+}
+
+function renderTrend(){
+  document.getElementById('trendLegend').innerHTML=TOP5.map((p,i)=>
+    `<div class="legend-item"><span class="legend-dot" style="background:${TOP5_COLORS[i]}"></span>${p}</div>`
+  ).join('');
+  const ctx=document.getElementById('trendChart').getContext('2d');
+  charts.trend=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:WEEK_LABELS,
+      datasets:TOP5.map((p,i)=>({
+        label:p,
+        data:WEEK_KEYS.map(wk=>getMvpForPlayer(wk,p)),
+        borderColor:TOP5_COLORS[i],
+        backgroundColor:'transparent',
+        borderWidth:2.5,
+        pointRadius:3,
+        pointBackgroundColor:TOP5_COLORS[i],
+        tension:0.3,
+        spanGaps:true,
+      }))
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,backgroundColor:'#1a2236',borderColor:'rgba(255,255,255,.1)',borderWidth:1,titleColor:'#f0f4ff',bodyColor:'#8a9bbf'}},
+      scales:{
+        y:{min:30,grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#5a6a88'},title:{display:true,text:'MVP+ score',color:'#5a6a88'}},
+        x:{grid:{display:false},ticks:{color:'#5a6a88',font:{size:10},maxRotation:45}}
+      }
+    }
+  });
+}
+
+// ─── FORMULA CALCULATOR
+function calcFormula(){
+  const pff=+document.getElementById('sl_pff').value;
+  const wins=+document.getElementById('sl_wins').value;
+  const gp=+document.getElementById('sl_gp').value;
+  const ptd=+document.getElementById('sl_ptd').value;
+  const rtd=+document.getElementById('sl_rtd').value;
+  const bonus=+document.getElementById('sl_bonus').value;
+  document.getElementById('v_pff').textContent=pff.toFixed(1);
+  document.getElementById('v_wins').textContent=wins;
+  document.getElementById('v_gp').textContent=gp;
+  document.getElementById('v_ptd').textContent=ptd;
+  document.getElementById('v_rtd').textContent=rtd;
+  document.getElementById('v_bonus').textContent=bonus.toFixed(1);
+  const result=calcMVP(pff,wins,gp,ptd,rtd,bonus);
+  document.getElementById('calc_result').textContent=result.toFixed(1);
+  const pffC=((pff*2)/3.75).toFixed(1);
+  const winsC=(((wins/gp)*125)/3.75).toFixed(1);
+  const ptdC=(((ptd/gp)*32)/3.75).toFixed(1);
+  const rtdC=(((rtd/gp)*16)/3.75).toFixed(1);
+  document.getElementById('calc_breakdown').innerHTML=
+    `<span style="color:#60a5fa">PFF: ${pffC}</span> + <span style="color:#22c55e">Wins: ${winsC}</span><br>`+
+    `<span style="color:#f4c24a">Pass TD: ${ptdC}</span> + <span style="color:#f97316">Rush TD: ${rtdC}</span><br>`+
+    `<span style="color:#a855f7">Bonus: +${bonus.toFixed(1)}</span>`;
+  const w18top=weeksData['Week18'][0];
+  let comparison='';
+  if(result>w18top.mvp) comparison=`📈 Higher than ${w18top.p} (${w18top.mvp.toFixed(1)}) — would lead the 2025 race`;
+  else if(result>85) comparison=`🏈 Top-5 MVP+ territory`;
+  else if(result>70) comparison=`📊 Fringe MVP consideration`;
+  else comparison=`📉 Below typical MVP threshold (~85+)`;
+  document.getElementById('calc_comparison').textContent=comparison;
+}
+
+// ─── HISTORY
+function renderHistory(){
+  const ctx=document.getElementById('histChart').getContext('2d');
+  charts.hist=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:historicMVPs.map(r=>r.yr),
+      datasets:[{label:'MVP+ score',data:historicMVPs.map(r=>r.score),backgroundColor:historicMVPs.map(r=>r.yr===2025?'#f4c24a':'#1d4ed8'),borderColor:historicMVPs.map(r=>r.yr===2025?'#c8961e':'#3b82f6'),borderWidth:1,borderRadius:4}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a2236',borderColor:'rgba(255,255,255,.1)',borderWidth:1,titleColor:'#f0f4ff',bodyColor:'#8a9bbf',callbacks:{label:c=>`MVP+: ${c.raw.toFixed(1)} — ${historicMVPs[c.dataIndex].player}`}}},
+      scales:{y:{min:70,grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#5a6a88'}},x:{grid:{display:false},ticks:{color:'#5a6a88',font:{size:10},maxRotation:45,autoSkip:false}}}
+    }
+  });
+  document.getElementById('histTable').innerHTML=`<thead><tr><th>Year</th><th>MVP Leader</th><th>MVP+</th><th>Formula check</th><th>Pass TD</th><th>PFF</th><th>Wins</th><th>Rush TD</th><th>Trend</th></tr></thead><tbody>`+
+  historicMVPs.map((r,i)=>{
+    const calc=calcMVP(r.pff,r.wins,16,r.ptd,r.rtd,0).toFixed(1);
+    const prev=i>0?historicMVPs[i-1]:null;
+    const chip=!prev?'':r.score>prev.score?'<span class="trend-chip trend-up">↑</span>':r.score<prev.score?'<span class="trend-chip trend-down">↓</span>':'<span class="trend-chip trend-flat">−</span>';
+    return`<tr><td style="color:var(--text3);font-weight:600">${r.yr}</td><td style="font-weight:600">${r.player}</td><td class="score-cell">${r.score.toFixed(1)}</td><td style="color:var(--text3);font-size:12px">~${calc}</td><td>${r.ptd}</td><td>${r.pff}</td><td>${r.wins}</td><td>${r.rtd}</td><td>${chip}</td></tr>`;
+  }).join('')+'</tbody>';
+}
+
+// ─── STATS
+function renderStats(){
+  const corrs=[
+    {name:'Wins / games played',val:0.82,col:'#22c55e',desc:'Dominant predictor. The model weights win rate at (W/GP)×125÷3.75, making it the largest single component.'},
+    {name:'PFF grade',val:0.78,col:'#60a5fa',desc:'PFF×2÷3.75 is the efficiency backbone. A 10-point PFF gap translates to ~5.3 MVP+ points.'},
+    {name:'Passing TD rate',val:0.71,col:'#f4c24a',desc:'(PTD/GP)×32÷3.75. Volume stat — more TDs = more highlights = more votes.'},
+    {name:'Rush TD rate',val:0.44,col:'#f97316',desc:'(RTD/GP)×16÷3.75. Half the weight of pass TDs; rewards dual-threats like Allen (14) and Lawrence (9).'},
+    {name:'Team bonus',val:0.38,col:'#a855f7',desc:'Narrative/performance bonus (0–3.6). Stafford received 0.8 pts at season end; Allen 3.6 in Week 1.'},
+    {name:'Games played',val:0.29,col:'#14b8a6',desc:'Durability matters — missed games both hurt raw stats and trigger the Missed Games Penalty.'},
+  ];
+  document.getElementById('corrGrid').innerHTML=corrs.map(c=>`
+    <div class="corr-card">
+      <div class="corr-name">${c.name}</div>
+      <div class="corr-val" style="color:${c.col}">${c.val.toFixed(2)}</div>
+      <div class="corr-bar-bg"><div class="corr-bar-fill" style="width:${Math.round(c.val*100)}%;background:${c.col}"></div></div>
+      <div class="corr-desc">${c.desc}</div>
+    </div>`).join('');
+
+  const final=weeksData['Week18'];
+  const maxMvp=Math.max(...final.map(d=>d.mvp));
+  const barColors=['#f4c24a','#22c55e','#f97316','#3b82f6','#a855f7','#14b8a6','#ef4444','#8a9bbf','#8a9bbf','#8a9bbf','#8a9bbf','#8a9bbf','#8a9bbf','#8a9bbf','#8a9bbf','#8a9bbf','#8a9bbf','#8a9bbf'];
+  document.getElementById('statBars').innerHTML=final.map((d,i)=>{
+    const pct=Math.round((d.mvp/maxMvp)*100);
+    const col=barColors[i]||'#5a6a88';
+    return`<div class="stat-bar-row">
+      <div class="stat-bar-head"><span class="stat-bar-name">${d.p}</span><span class="stat-bar-val">${d.mvp.toFixed(1)}</span></div>
+      <div class="stat-bar-bg"><div class="stat-bar-fill" style="width:${pct}%;background:${col};color:${i<6?'#000':'rgba(255,255,255,.7)'}">
+        ${pct>25?`PFF ${d.pff} · TD ${d.ptd} · W ${d.wins}`:''}
+      </div></div>
+    </div>`;
+  }).join('');
+
+  const ctx2=document.getElementById('scatterChart').getContext('2d');
+  charts.scatter=new Chart(ctx2,{
+    type:'scatter',
+    data:{datasets:[{label:'2025 QBs',data:final.map(d=>({x:d.pff,y:d.mvp,name:d.p})),backgroundColor:final.map((d,i)=>i===0?'#f4c24a':'#3b82f6'),pointRadius:final.map((d,i)=>i===0?9:5),pointHoverRadius:9}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a2236',borderColor:'rgba(255,255,255,.1)',borderWidth:1,titleColor:'#f0f4ff',bodyColor:'#8a9bbf',callbacks:{label:c=>`${c.raw.name} — PFF: ${c.raw.x}, MVP+: ${c.raw.y.toFixed(1)}`}}},scales:{x:{min:55,max:100,grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#5a6a88'},title:{display:true,text:'PFF grade',color:'#5a6a88'}},y:{min:40,max:110,grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#5a6a88'},title:{display:true,text:'MVP+ score',color:'#5a6a88'}}}}
+  });
+
+  const ctx3=document.getElementById('histScatter').getContext('2d');
+  charts.histScatter=new Chart(ctx3,{
+    type:'scatter',
+    data:{datasets:[
+      {label:'MVP winners',data:historicMVPs.map(r=>({x:r.pff,y:r.ptd,yr:r.yr,name:r.player})),backgroundColor:'#f4c24a',pointRadius:7,pointHoverRadius:9},
+      {label:'Runners-up',data:histAll.map(r=>({x:r.pff,y:r.ptd,name:r.player})),backgroundColor:'rgba(59,130,246,.55)',pointRadius:5,pointHoverRadius:7},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#8a9bbf',usePointStyle:true,pointStyle:'circle',font:{size:12}}},tooltip:{backgroundColor:'#1a2236',borderColor:'rgba(255,255,255,.1)',borderWidth:1,titleColor:'#f0f4ff',bodyColor:'#8a9bbf',callbacks:{label:c=>c.raw.yr?`${c.raw.name} (${c.raw.yr}) — PFF: ${c.raw.x}, TDs: ${c.raw.y}`:`${c.raw.name} — PFF: ${c.raw.x}, TDs: ${c.raw.y}`}}},scales:{x:{min:55,max:100,grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#5a6a88'},title:{display:true,text:'PFF grade',color:'#5a6a88'}},y:{min:0,max:60,grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#5a6a88'},title:{display:true,text:'Passing touchdowns',color:'#5a6a88'}}}}
+  });
+}
+
+populateWeekSel();
+renderCurrent();
+</script>
+</body>
+</html>
